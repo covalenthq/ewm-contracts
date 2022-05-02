@@ -1,6 +1,3 @@
-# operational-staking
-
-[![codecov](https://codecov.io/gh/covalenthq/operational-staking/branch/main/graph/badge.svg?token=VFEMI1ZKW6)](https://codecov.io/gh/covalenthq/operational-staking)
 
 ## Hardhat
 
