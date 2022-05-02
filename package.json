@@ -1,0 +1,45 @@
+{
+    "name": "hardhat-project",
+    "devDependencies": {
+        "@eth-optimism/smock": "^1.1.10",
+        "@nomiclabs/hardhat-ethers": "^2.0.4",
+        "@nomiclabs/hardhat-waffle": "^2.0.1",
+        "@openzeppelin/hardhat-upgrades": "^1.13.0",
+        "@truffle/hdwallet-provider": "^1.4.0",
+        "chai": "^4.3.4",
+        "delay": "^5.0.0",
+        "eslint": "^8.11.0",
+        "eslint-config-google": "^0.14.0",
+        "eslint-config-prettier": "^8.5.0",
+        "ethereum-waffle": "^3.4.0",
+        "ethers": "^5.5.3",
+        "hardhat": "^2.9.0",
+        "hardhat-contract-sizer": "^2.5.1",
+        "hardhat-gas-reporter": "^1.0.7",
+        "solhint-ci": "^4.0.2",
+        "solidity-coverage": "^0.7.20"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.4.2",
+        "@openzeppelin/contracts-upgradeable": "^4.4.2",
+        "hardhat-abi-exporter": "^2.8.0",
+        "prettier": "^2.3.0",
+        "prettier-plugin-solidity": "^1.0.0-beta.16",
+        "solhint": "^3.3.6",
+        "solidity-ast": "^0.4.25"
+    },
+    "scripts": {
+        "compile": "npx hardhat compile",
+        "coverage": "npx hardhat coverage",
+        "abi": "npx hardhat export-abi",
+        "lint:fix": "npm run lint:js:fix && npm run lint:sol:fix",
+        "lint": "npm run lint:js && npm run lint:sol",
+        "lint:js": "eslint --ignore-path .gitignore .",
+        "lint:js:fix": "eslint --ignore-path .gitignore . --fix",
+        "lint:sol": "solhint 'contracts/**/*.sol' && prettier -c 'contracts/**/*.sol'",
+        "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
+        "test:proof-chain": "npx hardhat test ./test/proof-chain/unit-tests/*",
+        "test:staking-contract": "npx hardhat test ./test/operational-staking/integration-tests/all",
+        "test:unit": "npx hardhat test ./test/operational-staking/unit-tests/*"
+    }
+}

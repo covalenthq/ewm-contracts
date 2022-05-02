@@ -1,0 +1,9 @@
+[
+  "function addValidator(address,uint128) returns (uint256)",
+  "function disableValidator(uint128,uint256)",
+  "function enableValidator(uint128)",
+  "function getValidatorCompoundedStakingData(uint128) view returns (uint128, uint128)",
+  "function getValidatorMetadata(uint128) view returns (address, uint128, uint128, uint128)",
+  "function getValidatorStakingData(uint128) view returns (uint128, uint128)",
+  "function rewardValidators(uint128[],uint128[])"
+]

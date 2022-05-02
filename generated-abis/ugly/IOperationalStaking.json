@@ -1,0 +1,157 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "validator",
+        "type": "address"
+      },
+      {
+        "internalType": "uint128",
+        "name": "commissionRate",
+        "type": "uint128"
+      }
+    ],
+    "name": "addValidator",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint256",
+        "name": "blockNumber",
+        "type": "uint256"
+      }
+    ],
+    "name": "disableValidator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      }
+    ],
+    "name": "enableValidator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      }
+    ],
+    "name": "getValidatorCompoundedStakingData",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "staked",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
+        "name": "delegated",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      }
+    ],
+    "name": "getValidatorMetadata",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "_address",
+        "type": "address"
+      },
+      {
+        "internalType": "uint128",
+        "name": "staked",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
+        "name": "delegated",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
+        "name": "commissionRate",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      }
+    ],
+    "name": "getValidatorStakingData",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "staked",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
+        "name": "delegated",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128[]",
+        "name": "validatorId",
+        "type": "uint128[]"
+      },
+      {
+        "internalType": "uint128[]",
+        "name": "amount",
+        "type": "uint128[]"
+      }
+    ],
+    "name": "rewardValidators",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
