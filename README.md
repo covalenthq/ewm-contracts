@@ -6,10 +6,10 @@
 
 [Getting started](https://hardhat.org/getting-started/)
 
-- To start a node: `$npx hardhat node`
-- To compile: `$npx hardhat compile`
-- To run all tests: `$npx hardhat test`
-- to run a specific test: `$npx hardhat test path/to/test`
+- To start a node: `npx hardhat node`
+- To compile: `npx hardhat compile`
+- To run all tests: `npx hardhat test`
+- to run a specific test: `npx hardhat test path/to/test`
 
 # Set up
 
@@ -36,18 +36,24 @@ networks: {
 
 #### Run
 
-`npx hardhat test ./test/staking-contract-test/unit-tests/*`
+`npx hardhat test ./test/operational-staking/unit-tests/*`
 
-`npx hardhat test ./test/staking-contract-test/integration-tests/all`
+`npx hardhat test ./test/operational-staking/integration-tests/all`
 
-`npx hardhat test ./test/proof-chain-test/unit-tests/*`
+`npx hardhat test ./test/proof-chain/unit-tests/*`
 
-The tests have to be run in chunks so the accounts don't run out of Ether.
 
-### Deploy to local test network
+# Summary
+This repo contains two contracts: ProofChain and Staking which are part of the Covalent Network. They were designed with the purpose to enable the Covalent Staking program. 
 
-To deploy the contracts to a local network with contract parameters set up and 1 block specimen producer enabled,  run
-`npx hardhat run scripts/deployWithSetup.js`
+Operators stake their tokens, do work by running nodes, submit a proof of work to the ProofChain and receive rewards in CQT tokens. If enough operators get the same result of work, then quorum is achieved, the rewards are emitted and pushed from the ProofChain to the Staking. Additionally, delegators (these who do not run nodes) can delegate their tokens under the operators and receive rewards. The delegators will have to pay commission fees to the operators. 
+
+For the detailed explanation of what is Covalent Network and what kind of work the operators do please refer to the [white paper](https://www.covalenthq.com/static/documents/Block%20Specimen%20Whitepaper%20V1.2.pdf).
+
+![image](https://user-images.githubusercontent.com/14303197/165625028-e6676cfb-1b52-47d4-bdc8-97ff95db18dd.png)
+
+
+
 
 # Staking Explained
 
@@ -55,9 +61,9 @@ To deploy the contracts to a local network with contract parameters set up and 1
 
 To distribute tokens to stakers.
 
-The reward emission will be pushed from the StakingManager contract every checkpoint. The StakingManager does not require an audit for now and for the scope of the Staking contract it does not matter how the pushed rewards were calculated. A checkpoint is defined as a transaction in which the rewards are pushed and will happen every couple of blocks. The checkpoint transaction determines the rewards amount, hence it is unknown how many rewards will be pushed to a validator beforehand.
+The reward emission will be pushed from the ProofChain contract every checkpoint. A checkpoint is defined as a transaction in which the rewards are pushed and will happen every couple of blocks. The checkpoint transaction determines the rewards amount, hence it is unknown how many rewards will be pushed to a validator beforehand.
 
-There are four types of entities: Validators (who self-delegate), Delegators (who delegate tokens to the validators), the Owner (Covalent) and the StakingManager (Covalent contract).
+There are four types of entities: Validators (the network operators who self-delegate), Delegators (who delegate tokens to the validators), the Owner (Covalent) and the StakingManager (ProofChain contract).
 
 Delegators pay commission fees from their earned reward based on the commission rate dictated by validators. The validators will be added to the contract by the StakingManager and will be disabled until the StakingManager activates its instance.
 
@@ -115,7 +121,7 @@ _Note: Validators cannot set their commission rate, and if they wish to change i
 
 ### Staking contract does not need to know:
 
-- how slashing/rewards are calculated per validator per checkpoint
+- how rewards are calculated per validator per checkpoint
 - how it's decided when validator gets disabled
 
 ### Staking Math
@@ -166,77 +172,182 @@ There is a slight precision loss in rewards calculation. It is acceptable as lon
 
 - Cool down periods might be changed with the next upgrade, so these are not constant.
 - Commission earned by validators is not compounded towards the shares that the validator has
-- The contract should be upgreadable
+- The contract is upgreadable
 
-# Proof Chain Overview
 
-The Proof Chain contract is a state machine that:
+# Proof Chain Explained
 
-- Accepts proofs in the form of hashes
-- Compares hashes to find consensus
-- Allows arbitration if consensus is not found
+### The goal:
 
-## Operators
+Allow operators to submit proofs of work. 
 
-An `Operator` is an agent-object that performs some task. In v1, the only task is Block Specimen production.
+There are five types of entities: Owner, Block Specimen Producer (BSP), Block Specimen Producer Manager, Auditor and Governer. The Block Specimen Producer is an operator who runs a covalent node and submits proofs of work to the ProofChain. The Block Specimen Producer Manager is an account the operator uses to enable/disable its operator instances. An Auditor is an operator who arbitrates sessions that did not reach quorum. A Governer is an entity who can add or remove operators and set additional storage variables. 
 
-## Block Specimens
+Currently, only Operators approved by Covalent can perform the BSP role and Covalent performs the auditor and governer roles. 
 
-A Block Specimen is an object generated by replicating block data. Block Specimens are generated by running a geth node with Covalent's Block Specimen Production agent: [bsp-agent](https://github.com/covalenthq/bsp-agent).
+### The flow:
+1. A network operator gets whitelisted on the ProofChain and Staking contracts. 
+2. The operator stakes CQT on the Staking contract using its staking wallet. 
+3. The operator enables its instance on the ProofChain. 
+4. The delegators delegate their CQT tokens under the operator instance.
+6. The operator produces a Block Specimen and submits proofs of work in the form of Block Specimen Hashes to the ProofChain. This starts a new session for that corresponding block. 
+7. Other operators submit the proofs for the same session as well. 
+8. Once the session deadline has reached, a separate agent invokes a finalize transaction. Here it gets determined if the quorum was reached or not. Achieving the quorum means a majority submitted the same Block Specimen Hash. 
+9. If quorum is achieved the participants who submitted the agreed specimen hashes get rewarded. The rewards are pushed from the ProofChain to the Staking. If quorum was not achieved nothing happens. In both cases at the end of the transaction, the session gets marked as `requires audit`.
+10. Sometimes the nodes may end up submitting hashes for reorg blocks and Covalent wants to reward these too. The auditor will be arbitrating these submissions. 
 
-### Block Specimen Proofs
-
-A proof of the block specimen is in the form of a hash of the Block Specimen's data. A `BlockSpecimenProof` is submitted to the Proof Chain contract containing the hash and other identifying information.
-
-## Block Specimen Session
-
-A `BlockSpecimenSession` is period of time when bsp-agents can submit `BlockSpecimenProof`s. The session tracks who has contributed which proofs.
-
-Once a session starts:
-
-- any `Operator` with the bsp-role can submit a `BlockSpecimenProof`
-- the smart contract compares the hashes of each submitted proof
-
-After a period of time, one of the following will happen:
-
-1. majority agreement will be found amongst the submitted proofs
-2. no majority agreement found
-3. not enough submissions -> time runs out
-
-### 1. Majority agreement is found
-
-If a sufficient number of equal proof hashes are found[^1], an internal function `finalizeAndRewardSpecimenSession` is called. This function ends the session and rewards those who contributed.
-
-### 2. No majority agreement found
-
-If there is not sufficient agreement between submitted proofs, but enough of the bsp-agents have submitted a proof[^2], the session pauses and flips a flag `requiresArbitration = true;`.
-
-### 3. Time runs out
-
-After a defined number of blocks have passed, the session pauses and flips a flag `requiresArbitration = true;`.
-
-[^1]: Sufficient agreement as defined by being a majority ratio like 2/3
-[^2]: A submission threshold defined as a ratio like 8/10
-
-## Arbitration
-
-If agreement is not found, arbitration is required. In v1, arbitration is done using Covalent as ground truth.
-
-A Covalent account will have `AUDITOR_ROLE` and can call `arbitrateBlockSpecimenSession(blockHeight, definitiveSpecimenHash)`.
-
-`Operators` who are found to have proof hashes that match the Auditor's are rewarded. The session is finalized.
-
-## Rewards
-
-The reward function is likely to change but as I write this on February 24, 2020 it works as a simple linear relationship:
-`reward = (allocatedReward) * stake / totalStakes`
-
-A reward is sent to an `Operator` if they submitted a hash that was equal to the one that was agreed upon.
 
 ## Role Management
 
-A large portion of the smart contract is managing roles of operators. Their role(s) determine what actions they can take. There are currently 3 roles: `BLOCK_SPECIMEN_PRODUCER_ROLE`, `AUDITOR_ROLE`, and `GOVERNANCE_ROLE`. The first two are described above.
+In order for a BSP Operator to be able to submit the proofs, its instance must be enabled on the ProofChain contract. Enabling/disabling an Operator on the ProofChain will enable/disable its Validator instance on the Staking contract. On the ProofChain enabling/disabling is done by the BSP Manager address which is the Validator address on the Staking contract. One BSP Manager can manage multiple BSP Operators.
 
-### Governance Role
+## Session explained
 
-All of the smart contract parameters that can be varied are controlled by those holding the `GOVERNANCE_ROLE`. The Governance Role initially acts as a centralized point of control while the remainder of network is being built out.
+A session starts when an operator submits the first proof per `chain id` per `block height`. A Block Specimen is an object generated by replicating block data. Block Specimens are generated by running a geth node with Covalent's Block Specimen Production agent: [bsp-agent](https://github.com/covalenthq/bsp-agent). A hash of the Block Specimen gets submitted to the ProofChain and acts as a proof of work.
+
+### Session contraints/requirements
+- **minimum stake** - operators must stake a minimum number of tokens on the Staking contract to participate
+- **block-divisor** - block specimens are produced only for every nth block.
+- **max specimen submissions per block height** - the same operator might submit multiple block specimens per block height due to potential reorgs
+- **session duration** - in blocks
+- **live sync** - the contract has a mapping of the _sink_ chain block height to the _source_ chain block height that allows the application of a constraint that enables submissions for block specimens of the current/recently mined blocks
+- **reward per block hash** - is distributed per block hash rather than per session
+- **min submissions** - to achieve quorum, there should be at least a minimum number of submissions of the agreed hash
+
+### Session submission parameters 
+- chain id
+- block height
+- block hash
+- specimen hash
+- storage URL
+
+## Reward Distribution
+
+The reward is allocated per block hash and distributed between the participants who submitted the agreed (when the quorum is achieved) or correct (in case of reorg) specimen hash. The reward is distributed proportionally to how much each operator has staked and how much is delegated to that operator.
+
+### Optimistic phase
+
+The optimistic phase happens when enough participants have submitted the same block specimen hash and quorum is achieved.
+
+### Pessimistic phase
+
+In the pessimistic phase the auditor makes `arbitrateBlockSpecimenSession()` transaction providing the correct block specimen hash. The Pessimistic phase may happen in the following 2 cases:
+- when quorum was not achivied.
+- when quorum was achivied, but the operators have submitted hashes for reorg blocks that are still valid. The auditor will be running a node and regenerate the reorgs to find valid block specimen hashes.
+
+The pessimistic phase will be fully implemented later.
+
+### Examples
+
+Assuming the required quorum is set to > 50%.
+
+#### Case 1 - Quorum achieved, only Optimistic Phase
+
+Block Hash A
+- 5 submissions of specimen hash A'
+- 2 submissions of specimen hash A''
+
+
+##### Optimistic phase
+
+~71% (5 out 7) participants submitted specimen hash A'. The quorum is achieved. The submitters of the specimen hash A' receive the reward. These who submitted A'' do not receive anything.
+
+##### Pessimistic phase
+
+Not required since the quorum was achieved and no other block hashes submitted.
+
+
+#### Case 2 - Quorum not achieved, Pessimistic Phase happens
+
+Block Hash A
+- 2 submissions of specimen hash A'
+- 2 submissions of specimen hash A''
+
+
+##### Optimistic phase
+
+50% of participants submitted specimen hash A' and A''. The quorum is not achieved. No one receives the reward in the optimistic phase.
+
+
+##### Pessimistic phase
+
+The auditor arbitrates the session and decides that the specimen hash A' is correct. The submitters of the specimen hash A' receive the reward.
+
+
+#### Case 3 - Quorum is achieved, Pessimistic Phase happens
+
+Block Hash A
+- 5 submissions of specimen hash A'
+- 2 submissions of specimen hash A''
+
+Block Hash B
+- 1 submissions of specimen hash B'
+- 1 submissions of specimen hash B''
+
+
+##### Optimistic phase
+
+~55% (5 out 9) participants submitted specimen hash A'. The quorum is achieved. The submitters of the specimen hash A' receive the reward. These who submitted A'' do not receive anything. 
+
+
+##### Pessimistic phase
+
+The auditor arbitrates the session for block hash B and decides that the specimen hash B'' is correct. The submitters of the specimen hash B'' receive the reward and these who submitted B' do not receive anything. 
+
+
+#### Case 4 - Quorum not achieved, Pessimistic Phase happens
+
+Block Hash A
+- 5 submissions of specimen hash A'
+- 2 submissions of specimen hash A''
+
+Block Hash B
+- 1 submissions of specimen hash B'
+- 1 submissions of specimen hash B''
+- 1 submissions of specimen hash B'''
+
+Block Hash C
+- 7 submissions of specimen hash C'
+
+Block Hash D
+- 2 submissions of specimen hash D'
+- 3 submissions of specimen hash D''
+
+
+##### Optimistic phase
+
+The quorum is not achieved since no specimen hash has >50% of submitters. No one receives the reward in the optimistic phase.
+
+##### Pessimistic phase
+
+The auditor arbitrates the session for all the submitted block hashes: A, B, C and D. It decides that the specimen hashes A', B''', D' are correct. The corresponding submitters receive the reward. The submitters of the specimen hashes A'', B', B'', C' and D'' do not receive anything
+
+
+
+## Functionalities
+
+##### What Block Specimen Producer Operator can do
+- submit proofs 
+
+##### What Block Specimen Producer Operator Manager can do
+- enable/disable its operator instances
+
+##### What Auditor can do
+- arbitrate sessions
+
+##### What Governer can do
+- add/remove BSP operators
+- add/remove auditors
+- set staking contract address
+- set quorum threshold
+- set block divisor (nth block)
+- set reward allocated 
+- set session duration 
+- set chain sync data
+- set max submissions per block height
+- set min submissinos required
+- set validators commission rate
+
+#### What Owner can do
+- add/remove governers
+- upgrade the contract
