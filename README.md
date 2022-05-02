@@ -182,9 +182,9 @@ There is a slight precision loss in rewards calculation. It is acceptable as lon
 
 Allow operators to submit proofs of work. 
 
-There are five types of entities: Owner, Block Specimen Producer (BSP), Block Specimen Producer Manager, Auditor and Governer. The Block Specimen Producer is an operator who runs a covalent node and submits proofs of work to the ProofChain. The Block Specimen Producer Manager is an account the operator uses to enable/disable its operator instances. An Auditor is an operator who arbitrates sessions that did not reach quorum. A Governer is an entity who can add or remove operators and set additional storage variables. 
+There are five types of entities: Owner, Block Specimen Producer (BSP), Block Specimen Producer Manager, Auditor and Governor. The Block Specimen Producer is an operator who runs a covalent node and submits proofs of work to the ProofChain. The Block Specimen Producer Manager is an account the operator uses to enable/disable its operator instances. An Auditor is an operator who arbitrates sessions that did not reach quorum. A Governor is an entity who can add or remove operators and set additional storage variables. 
 
-Currently, only Operators approved by Covalent can perform the BSP role and Covalent performs the auditor and governer roles. 
+Currently, only Operators approved by Covalent can perform the BSP role and Covalent performs the auditor and governor roles. 
 
 ### The flow:
 1. A network operator gets whitelisted on the ProofChain and Staking contracts. 
@@ -336,7 +336,7 @@ The auditor arbitrates the session for all the submitted block hashes: A, B, C a
 ##### What Auditor can do
 - arbitrate sessions
 
-##### What Governer can do
+##### What Governor can do
 - add/remove BSP operators
 - add/remove auditors
 - set staking contract address
@@ -350,5 +350,5 @@ The auditor arbitrates the session for all the submitted block hashes: A, B, C a
 - set validators commission rate
 
 #### What Owner can do
-- add/remove governers
+- add/remove governors
 - upgrade the contract
