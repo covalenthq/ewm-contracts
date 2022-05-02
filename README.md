@@ -1,5 +1,16 @@
 
-## Hardhat
+
+# Set up
+
+
+
+
+### Installation
+
+1. Clone repo
+2. Run `npm install`
+
+### Hardhat
 
 [Getting started](https://hardhat.org/getting-started/)
 
@@ -7,13 +18,6 @@
 - To compile: `npx hardhat compile`
 - To run all tests: `npx hardhat test`
 - to run a specific test: `npx hardhat test path/to/test`
-
-# Set up
-
-### Installation
-
-1. Clone repo
-2. Run `npm install`
 
 ### Testing
 
