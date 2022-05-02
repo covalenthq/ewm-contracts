@@ -504,18 +504,18 @@ contract ProofChain is OwnableUpgradeable {
         uint128 totalStake;
         mapping(address => SessionParticipantData) storage participantsData = session.participantsData;
         for (uint256 i = 0; i < len; i++) {
-            SessionParticipantData storage pd = participantsData[participants[i]];
-            totalStake += pd.stake;
+            totalStake += participantsData[participants[i]].stake;
+        }
+        for (uint256 i = 0; i < len; i++) {
+            participant = participants[i];
+            SessionParticipantData storage pd = participantsData[participant];
+            ids[i] = validatorIDs[participant];
+            rewards[i] = uint128((uint256(pd.stake) * uint256(_blockSpecimenRewardAllocation)) / totalStake);
             // release gas if possible
             if (pd.submissionCounter == 1) {
                 pd.submissionCounter = 0;
                 pd.stake = 0;
             }
-        }
-        for (uint256 i = 0; i < len; i++) {
-            participant = participants[i];
-            ids[i] = validatorIDs[participant];
-            rewards[i] = uint128((uint256(participantsData[participant].stake) * uint256(_blockSpecimenRewardAllocation)) / totalStake);
         }
         _stakingInterface.rewardValidators(ids, rewards);
         emit BlockSpecimenRewardAwarded(chainId, blockHeight, blockHash, specimenHash);
