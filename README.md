@@ -187,7 +187,7 @@ There are five types of entities: Owner, Block Specimen Producer (BSP), Block Sp
 Currently, only Operators approved by Covalent can perform the BSP role and Covalent performs the auditor and governor roles. 
 
 ### The flow:
-1. A network operator gets whitelisted on the ProofChain and Staking contracts. 
+1. A network operator gets added on the ProofChain and Staking contracts by Covalent. 
 2. The operator stakes CQT on the Staking contract using its staking wallet. 
 3. The operator enables its instance on the ProofChain. 
 4. The delegators delegate their CQT tokens under the operator instance.
