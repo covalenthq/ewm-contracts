@@ -436,14 +436,11 @@ contract OperationalStaking is OwnableUpgradeable {
             // can only redeem > redeem threshold
             require(totalValue - s.staked >= REWARD_REDEEM_THRESHOLD, "Nothing to redeem");
             amountToRedeem = totalValue - s.staked; // set amount to redeem to all awailable rewards
-            }
-
-        else  {
+        } else {
             // making sure that amount of rewards exist
             require(totalValue - s.staked >= amount, "Requested amount is too high");
             amountToRedeem = amount; // set amount to redeem to the requested amount
-            }
-
+        }
 
         if (amountToRedeem != 0) {
             // "sell/burn" the reward shares
@@ -458,7 +455,6 @@ contract OperationalStaking is OwnableUpgradeable {
         emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
         _transferFromContract(beneficiary, amountToRedeem);
     }
-
 
     /*
      * Redeems partial commission
