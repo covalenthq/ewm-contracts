@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -79,6 +79,8 @@ contract OperationalStaking is OwnableUpgradeable {
     event MaxCapMultiplierChanged(uint128 newMaxCapMultiplier);
 
     event ValidatorEnabled(uint128 indexed validatorId);
+
+    event ValidatorAddressChanged(uint128 indexed validatorId, address indexed newAddress);
 
     modifier onlyStakingManager() {
         require(stakingManager == msg.sender, "Caller is not stakingManager");
@@ -423,43 +425,29 @@ contract OperationalStaking is OwnableUpgradeable {
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[msg.sender];
-        bool isValidator = v._address == msg.sender;
 
         // how many tokens a delegator/validator has in total on the contract
         // include earned commission if the delegator is the validator
-        uint128 totalValue = _sharesToTokens(s.shares, v.exchangeRate) + (isValidator ? v.commissionAvailableToRedeem : 0);
+        uint128 totalValue = _sharesToTokens(s.shares, v.exchangeRate);
 
         bool redeemAll = amount == 0; // amount is 0 when it's requested to redeem all rewards
-        if (redeemAll)
+        uint128 amountToRedeem;
+        if (redeemAll) {
             // can only redeem > redeem threshold
             require(totalValue - s.staked >= REWARD_REDEEM_THRESHOLD, "Nothing to redeem");
+            amountToRedeem = totalValue - s.staked; // set amount to redeem to all awailable rewards
+            }
+
+        else  {
             // making sure that amount of rewards exist
-        else require(totalValue - s.staked >= amount, "Requested amount is too high");
-
-        uint128 amountToRedeem = redeemAll ? totalValue - s.staked : amount;
-        uint128 stakeRewardToRedeem = amountToRedeem; // this will initially constraint commission paid and regular reward
-        uint128 comissionRewardToRedeem;
-
-        if (isValidator) {
-            // always redeem commission paid first, and only when no commission is left, redeem regular rewards
-            // redeem full amount or when requested amount, will consume both comission and regular reward
-            if (redeemAll || v.commissionAvailableToRedeem <= amountToRedeem) {
-                comissionRewardToRedeem = v.commissionAvailableToRedeem;
-                v.commissionAvailableToRedeem = 0;
-                stakeRewardToRedeem = amountToRedeem - comissionRewardToRedeem; // exclude commission paid
+            require(totalValue - s.staked >= amount, "Requested amount is too high");
+            amountToRedeem = amount; // set amount to redeem to the requested amount
             }
-            // if the amount to redeem is less than commission available
-            else {
-                stakeRewardToRedeem = 0; // stake reward to redeem is 0
-                comissionRewardToRedeem = amountToRedeem;
-                v.commissionAvailableToRedeem -= amountToRedeem;
-            }
-            emit CommissionRewardRedeemed(validatorId, beneficiary, comissionRewardToRedeem);
-        }
 
-        if (stakeRewardToRedeem != 0) {
+
+        if (amountToRedeem != 0) {
             // "sell/burn" the reward shares
-            uint128 validatorSharesRemove = _tokensToShares(stakeRewardToRedeem, v.exchangeRate);
+            uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
             unchecked {
                 v.totalShares -= validatorSharesRemove;
             }
@@ -467,8 +455,37 @@ contract OperationalStaking is OwnableUpgradeable {
                 s.shares -= validatorSharesRemove;
             }
         }
-        emit RewardRedeemed(validatorId, beneficiary, stakeRewardToRedeem);
-        _transferFromContract(beneficiary, stakeRewardToRedeem + comissionRewardToRedeem);
+        emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
+        _transferFromContract(beneficiary, amountToRedeem);
+    }
+
+
+    /*
+     * Redeems partial commission
+     */
+    function redeemCommission(
+        uint128 validatorId,
+        address beneficiary,
+        uint128 amount
+    ) public {
+        require(validatorId < validatorsN, "Invalid validator");
+        require(beneficiary != address(0x0), "Invalid beneficiary");
+        Validator storage v = _validators[validatorId];
+        require(v._address == msg.sender, "The sender is not the validator");
+
+        require(v.commissionAvailableToRedeem > 0, "No commission available to redeem");
+        require(amount <= v.commissionAvailableToRedeem, "Requested amount is higher than commission available to redeem");
+        v.commissionAvailableToRedeem -= amount;
+
+        _transferFromContract(beneficiary, amount);
+        emit CommissionRewardRedeemed(validatorId, beneficiary, amount);
+    }
+
+    /*
+     * Redeems all commission
+     */
+    function redeemAllCommission(uint128 validatorId, address beneficiary) external {
+        redeemCommission(validatorId, beneficiary, _validators[validatorId].commissionAvailableToRedeem);
     }
 
     /*
@@ -495,6 +512,23 @@ contract OperationalStaking is OwnableUpgradeable {
         // set cool down end to 0 to release gas if new unstaking amount is 0
         if (us.amount == 0) us.coolDownEnd = 0;
         emit Redelegated(oldValidatorId, newValidatorId, msg.sender, amount, unstakingId);
+    }
+
+    /*
+     * Changes the validator staking address
+     */
+    function setValidatorAddress(uint128 validatorId, address newAddress) external {
+        Validator storage v = _validators[validatorId];
+        require(msg.sender == v._address, "Sender is not the validator");
+
+        v.stakings[newAddress] = v.stakings[msg.sender];
+        delete v.stakings[msg.sender];
+
+        v.unstakings[newAddress] = v.unstakings[msg.sender];
+        delete v.unstakings[msg.sender];
+
+        v._address = newAddress;
+        emit ValidatorAddressChanged(validatorId, newAddress);
     }
 
     /*

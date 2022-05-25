@@ -77,14 +77,20 @@ async function redeemAllAndCompare(calculator, delegator, id, contract) {
   const res = await contract
       .connect(delegator)
       .redeemAllRewards(id, delegator.address);
+
   const reward = calculator.getRewards(delegator.address, id);
   const redeemed = await getRedeemedAmount(res);
   expect(redeemed).to.be.closeTo(reward[0].toString(), threshold);
   if (calculator.isValidator(id, delegator.address)) {
-    expect(await getRedeemedCommission(res)).to.be.closeTo(
+    const res1 = await contract
+      .connect(delegator)
+      .redeemAllCommission(id, delegator.address);
+
+    expect(await getRedeemedCommission(res1)).to.be.closeTo(
         reward[1].toString(),
         threshold,
     );
+    calculator.redeemAllCommission(id);
   }
   calculator.redeemAllRewards(delegator.address, id);
 }
@@ -95,20 +101,7 @@ async function redeemAndCompare(calculator, delegator, id, contract, amount) {
       .redeemRewards(id, delegator.address, amount);
   const reward = calculator.getRewards(delegator.address, id);
   let expectedReward = amount;
-  if (calculator.isValidator(id, delegator.address)) {
-    const commissionReward = reward[1];
-    expectedReward = amount.lte(commissionReward) ?
-            0 :
-            amount.sub(commissionReward);
-    const expectedCommission = amount.lte(commissionReward) ?
-            amount :
-            commissionReward;
-    const redeemedCommission = await getRedeemedCommission(res);
-    expect(redeemedCommission).to.be.closeTo(
-        expectedCommission.toString(),
-        threshold,
-    );
-  }
+
   const redeemed = await getRedeemedAmount(res);
   if (expectedReward != 0) {
     expect(redeemed).to.be.closeTo(expectedReward.toString(), threshold);
