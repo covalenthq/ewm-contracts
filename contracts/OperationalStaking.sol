@@ -442,16 +442,15 @@ contract OperationalStaking is OwnableUpgradeable {
             amountToRedeem = amount; // set amount to redeem to the requested amount
         }
 
-        if (amountToRedeem != 0) {
-            // "sell/burn" the reward shares
-            uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
-            unchecked {
-                v.totalShares -= validatorSharesRemove;
-            }
-            unchecked {
-                s.shares -= validatorSharesRemove;
-            }
+        // "sell/burn" the reward shares
+        uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
+        unchecked {
+            v.totalShares -= validatorSharesRemove;
         }
+        unchecked {
+            s.shares -= validatorSharesRemove;
+        }
+
         emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
         _transferFromContract(beneficiary, amountToRedeem);
     }
