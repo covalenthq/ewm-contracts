@@ -464,3 +464,18 @@ describe('Redeem Commission', function() {
 
 
 });
+
+
+
+// function redeemCommission(uint128 validatorId, address beneficiary, uint128 amount) public {
+
+
+//     require(amount <= v.commissionAvailableToRedeem, "Nothing to redeem");
+//     v.commissionAvailableToRedeem -= amount;
+
+// require(amount <= v.commissionAvailableToRedeem, "Requested amount is higher than commission available to redeem");
+// v.commissionAvailableToRedeem -= amount;
+
+//     _transferFromContract(beneficiary, amount);
+//     emit CommissionRewardRedeemed(validatorId, beneficiary, amount);
+// }

@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -283,6 +283,7 @@ contract OperationalStaking is OwnableUpgradeable {
         bool withTransfer
     ) internal {
         require(validatorId < validatorsN, "Invalid validator");
+        require(amount >= REWARD_REDEEM_THRESHOLD, "Stake amount is too small");
         Validator storage v = _validators[validatorId];
         bool isValidator = msg.sender == v._address;
 
@@ -320,7 +321,7 @@ contract OperationalStaking is OwnableUpgradeable {
      */
     function unstake(uint128 validatorId, uint128 amount) external {
         require(validatorId < validatorsN, "Invalid validator");
-        require(amount >= DIVIDER, "Unstake amount is too small");
+        require(amount >= REWARD_REDEEM_THRESHOLD, "Unstake amount is too small");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[msg.sender];
         require(s.staked >= amount, "Staked < amount provided");
@@ -431,33 +432,30 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 totalValue = _sharesToTokens(s.shares, v.exchangeRate);
 
         bool redeemAll = amount == 0; // amount is 0 when it's requested to redeem all rewards
-        uint128 amountToRedeem;
-        if (redeemAll) {
+        if (redeemAll)
             // can only redeem > redeem threshold
             require(totalValue - s.staked >= REWARD_REDEEM_THRESHOLD, "Nothing to redeem");
-            amountToRedeem = totalValue - s.staked; // set amount to redeem to all awailable rewards
-        } else {
             // making sure that amount of rewards exist
-            require(totalValue - s.staked >= amount, "Requested amount is too high");
-            amountToRedeem = amount; // set amount to redeem to the requested amount
-        }
+        else require(totalValue - s.staked >= amount, "Requested amount is too high");
 
-        // "sell/burn" the reward shares
-        uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
-        unchecked {
-            v.totalShares -= validatorSharesRemove;
-        }
-        unchecked {
-            s.shares -= validatorSharesRemove;
-        }
+        uint128 amountToRedeem = redeemAll ? totalValue - s.staked : amount;
+        uint128 stakeRewardToRedeem = amountToRedeem; // this will initially constraint commission paid and regular reward
+        uint128 comissionRewardToRedeem;
 
-        emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
-        _transferFromContract(beneficiary, amountToRedeem);
+        if (stakeRewardToRedeem != 0) {
+            // "sell/burn" the reward shares
+            uint128 validatorSharesRemove = _tokensToShares(stakeRewardToRedeem, v.exchangeRate);
+            unchecked {
+                v.totalShares -= validatorSharesRemove;
+            }
+            unchecked {
+                s.shares -= validatorSharesRemove;
+            }
+        }
+        emit RewardRedeemed(validatorId, beneficiary, stakeRewardToRedeem);
+        _transferFromContract(beneficiary, stakeRewardToRedeem + comissionRewardToRedeem);
     }
 
-    /*
-     * Redeems partial commission
-     */
     function redeemCommission(
         uint128 validatorId,
         address beneficiary,
@@ -466,7 +464,7 @@ contract OperationalStaking is OwnableUpgradeable {
         require(validatorId < validatorsN, "Invalid validator");
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
-        require(v._address == msg.sender, "Sender is not the validator");
+        require(v._address == msg.sender, "The sender is not the validator");
 
         require(v.commissionAvailableToRedeem > 0, "No commission available to redeem");
         require(amount <= v.commissionAvailableToRedeem, "Requested amount is higher than commission available to redeem");
@@ -476,9 +474,6 @@ contract OperationalStaking is OwnableUpgradeable {
         emit CommissionRewardRedeemed(validatorId, beneficiary, amount);
     }
 
-    /*
-     * Redeems all commission
-     */
     function redeemAllCommission(uint128 validatorId, address beneficiary) external {
         redeemCommission(validatorId, beneficiary, _validators[validatorId].commissionAvailableToRedeem);
     }
@@ -653,7 +648,8 @@ contract OperationalStaking is OwnableUpgradeable {
         Staking storage s = v.stakings[delegator];
         staked = s.staked;
         uint128 sharesValue = _sharesToTokens(s.shares, v.exchangeRate);
-        rewards = sharesValue - s.staked;
+        if (sharesValue <= s.staked) rewards = 0;
+        else rewards = sharesValue - s.staked;
         // if requested delegator is the requested validator
         if (v._address == delegator) commissionEarned = v.commissionAvailableToRedeem;
         Unstaking[] memory unstakings = v.unstakings[delegator];

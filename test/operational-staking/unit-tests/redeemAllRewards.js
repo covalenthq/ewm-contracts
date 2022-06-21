@@ -84,6 +84,9 @@ describe('Redeem All Rewards', function() {
     await expect(res1)
         .to.emit(contract, 'RewardRedeemed')
         .withArgs(0, validator1.address, v1GivenReward);
+    // await expect(res1)
+    //     .to.emit(contract, 'CommissionRewardRedeemed')
+    //     .withArgs(0, validator1.address, v1GivenCommission);
 
     const res2 = await contract
         .connect(validator2)
@@ -91,6 +94,9 @@ describe('Redeem All Rewards', function() {
     await expect(res2)
         .to.emit(contract, 'RewardRedeemed')
         .withArgs(1, validator2.address, v2GivenReward);
+    // await expect(res2)
+    //     .to.emit(contract, 'CommissionRewardRedeemed')
+    //     .withArgs(1, validator2.address, v2GivenCommission);
   });
 
   it('Should emit redeem reward event with correct number of rewards when there are delegators', async function() {
@@ -154,6 +160,9 @@ describe('Redeem All Rewards', function() {
     await expect(res1)
         .to.emit(contract, 'RewardRedeemed')
         .withArgs(0, validator1.address, v1GivenReward);
+    // await expect(res1)
+    //     .to.emit(contract, 'CommissionRewardRedeemed')
+    //     .withArgs(0, validator1.address, v1GivenCommission);
 
     const res2 = await contract
         .connect(validator2)
@@ -161,6 +170,9 @@ describe('Redeem All Rewards', function() {
     await expect(res2)
         .to.emit(contract, 'RewardRedeemed')
         .withArgs(1, validator2.address, v2GivenReward);
+    // await expect(res2)
+    //     .to.emit(contract, 'CommissionRewardRedeemed')
+    //     .withArgs(1, validator2.address, v2GivenCommission);
   });
 
   it('Should change balances of the contract and delegator', async function() {
