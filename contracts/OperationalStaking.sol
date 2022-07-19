@@ -511,10 +511,13 @@ contract OperationalStaking is OwnableUpgradeable {
         Validator storage v = _validators[validatorId];
         require(msg.sender == v._address, "Sender is not the validator");
 
-        v.stakings[newAddress] = v.stakings[msg.sender];
+        v.stakings[newAddress].shares += v.stakings[msg.sender].shares;
+        v.stakings[newAddress].staked += v.stakings[msg.sender].staked;
         delete v.stakings[msg.sender];
 
-        v.unstakings[newAddress] = v.unstakings[msg.sender];
+        for (uint i = 0; i < v.unstakings[msg.sender].length; i++) {
+            v.unstakings[newAddress].push(v.unstakings[msg.sender][i]);
+        }
         delete v.unstakings[msg.sender];
 
         v._address = newAddress;
