@@ -432,11 +432,15 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 totalValue = _sharesToTokens(s.shares, v.exchangeRate);
 
         bool redeemAll = amount == 0; // amount is 0 when it's requested to redeem all rewards
-        if (redeemAll)
+        if (redeemAll) {
             // can only redeem > redeem threshold
             require(totalValue - s.staked >= REWARD_REDEEM_THRESHOLD, "Nothing to redeem");
-            // making sure that amount of rewards exist
-        else require(totalValue - s.staked >= amount, "Requested amount is too high");
+        }
+        // making sure that amount of rewards exist
+        else {
+            require(totalValue - s.staked >= amount, "Requested amount is too high");
+            require(amount >= REWARD_REDEEM_THRESHOLD, "Nothing to redeem");
+        }
 
         uint128 amountToRedeem = redeemAll ? totalValue - s.staked : amount;
         uint128 stakeRewardToRedeem = amountToRedeem; // this will initially constraint commission paid and regular reward
@@ -510,6 +514,7 @@ contract OperationalStaking is OwnableUpgradeable {
     function setValidatorAddress(uint128 validatorId, address newAddress) external {
         Validator storage v = _validators[validatorId];
         require(msg.sender == v._address, "Sender is not the validator");
+        require(newAddress != address(0), "Invalid validator address");
 
         v.stakings[newAddress].shares += v.stakings[msg.sender].shares;
         v.stakings[newAddress].staked += v.stakings[msg.sender].staked;
