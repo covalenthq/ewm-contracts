@@ -449,6 +449,8 @@ contract OperationalStaking is OwnableUpgradeable {
         if (stakeRewardToRedeem != 0) {
             // "sell/burn" the reward shares
             uint128 validatorSharesRemove = _tokensToShares(stakeRewardToRedeem, v.exchangeRate);
+            if (validatorSharesRemove > s.shares)
+                validatorSharesRemove = s.shares;
             unchecked {
                 v.totalShares -= validatorSharesRemove;
             }
