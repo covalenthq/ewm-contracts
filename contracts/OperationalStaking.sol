@@ -179,7 +179,6 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 amount;
         uint128 validatorId;
         uint128 commissionPaid;
-        uint128 rewardAmount;
 
         for (uint256 j = 0; j < ids.length; j++) {
             amount = amounts[j];
@@ -195,7 +194,6 @@ contract OperationalStaking is OwnableUpgradeable {
                     emit RewardFailedDueZeroStake(validatorId, amount);
                 } else {
                     commissionPaid = uint128((uint256(amount) * uint256(v.commissionRate)) / DIVIDER);
-                    rewardAmount = amount - commissionPaid;
                     v.exchangeRate += uint128(((amount - commissionPaid) * DIVIDER) / totalShares); // distribute the tokens by increasing the exchange rate
                     // commission is not compounded
                     // commisison is distributed under the validator instance
