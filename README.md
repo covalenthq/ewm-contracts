@@ -93,6 +93,9 @@ An unstaked amount can always be recovered: The unstaked amount (partially or in
 - Set the validator max cap multiplier
 - Set the maximum number of tokens the validator can stake
 - Set the StakingManager address
+- Renounce his role and disable all the following listed actions by calling renounceOwnership
+- Transfer the ownership to another address by calling transferOwnership
+- Set or change the stakingManager by calling setStakingManagerAddress
 
 ### What the StakingManager can do:
 
