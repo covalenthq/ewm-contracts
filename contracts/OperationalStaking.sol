@@ -671,4 +671,7 @@ contract OperationalStaking is OwnableUpgradeable {
         }
         return (staked, rewards, commissionEarned, unstakingAmounts, unstakingsEndEpochs);
     }
+
+    function renounceOwnership() public virtual override onlyOwner {}
+
 }
