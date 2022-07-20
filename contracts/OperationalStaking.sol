@@ -469,6 +469,7 @@ contract OperationalStaking is OwnableUpgradeable {
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         require(v._address == msg.sender, "The sender is not the validator");
+        require(amount > 0, "The requested amount is 0");
 
         require(v.commissionAvailableToRedeem > 0, "No commission available to redeem");
         require(amount <= v.commissionAvailableToRedeem, "Requested amount is higher than commission available to redeem");
