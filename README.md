@@ -78,6 +78,9 @@ Delegators pay commission fees from their earned reward based on the commission 
 - A validator cannot unstake tokens that would reduce the maximum cap below what is already delegated. If a validator is willing to do so, the validator will have to disable itself through the StakingManager. The delegators will stop earning the rewards from that validator, but they will have an option to redelegate tokens to another validator without a cool down period. The validator can enable its instance back through the StakingManager.
 - It is allowed for the same validator address to have multiple ids.
 
+### Additional constainsts:
+- Due to potential conversion overflow and precision loss there is a constaint that requires the staked and rewards amounts to be greater than REWARD_REDEEM_THRESHOLD. Currently it is set to 0.0000000001 CQT. Hence, if not the full amount is unstaked or redeem there is a potential lock of the remaining 0.0000000001.
+
 ### Redeeming Rewards:
 
 Delegators and validators can decide whether to withdraw all of their rewards or just a portion of them and may do so at any time without a cool-down period. To support certain use cases like pseudoanonymity preservation, the users can set a different address from their wallet address to which rewards will be transferred.
