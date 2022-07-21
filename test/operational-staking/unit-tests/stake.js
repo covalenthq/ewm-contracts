@@ -326,4 +326,29 @@ describe('Staking', function() {
         .to.emit(contract, 'Staked')
         .withArgs(0, validator1.address, maxCap);
   });
+
+  it('Should revert when stake amount is too small', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+
+    let REWARD_REDEEM_THRESHOLD = 10^8
+    let amount = REWARD_REDEEM_THRESHOLD - 1
+    await addEnabledValidator(
+      0,
+      contract,
+      opManager,
+      VALIDATOR_1,
+      1000000000000,
+  );
+    await expect(
+        contract.connect(validator1).stake(0, amount),
+    ).to.revertedWith('Stake amount is too small');
+  });
 });

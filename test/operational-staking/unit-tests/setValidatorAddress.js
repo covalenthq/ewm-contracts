@@ -278,4 +278,23 @@ describe('Set validator address', function() {
     expect(details.unstakingsEndEpochs[3]).to.equal(cooldown2);
   });
 
+  it('Should revert when the new address is 0.', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await contract.setStakingManagerAddress(opManager.address);
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 10);
+    await expect(
+        contract.connect(validator1).setValidatorAddress(0, "0x0000000000000000000000000000000000000000")
+    ).to.be.revertedWith("Invalid validator address");
+
+
+  });
+
 });

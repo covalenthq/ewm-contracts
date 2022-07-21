@@ -27,7 +27,6 @@ describe('Get validators from start id to end id metadata', function() {
       delegator1,
       delegator2,
     ] = await getAll();
-    // deposit(contract, oneToken.mul(100000))
     await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
     let md = await contract.getValidatorsMetadata(0, 1);
     expect(md.addresses[0]).to.equal(VALIDATOR_1);
@@ -77,7 +76,6 @@ describe('Get validators from start id to end id metadata', function() {
       delegator1,
       delegator2,
     ] = await getAll();
-    // deposit(contract, oneToken.mul(100000))
     await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
     await stake(oneToken, validator1, cqtContract, contract, 0);
     let md = await contract.getValidatorsMetadata(0, 1);
@@ -100,7 +98,6 @@ describe('Get validators from start id to end id metadata', function() {
       delegator1,
       delegator2,
     ] = await getAll();
-    // deposit(contract, oneToken.mul(100000))
     await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
     await stake(oneToken, validator1, cqtContract, contract, 0);
 
@@ -126,7 +123,6 @@ describe('Get validators from start id to end id metadata', function() {
       delegator1,
       delegator2,
     ] = await getAll();
-    // deposit(contract, oneToken.mul(100000))
     await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
     await contract.connect(opManager).disableValidator(0, 1);
     md = await contract.getValidatorsMetadata(0, 1);
@@ -136,5 +132,35 @@ describe('Get validators from start id to end id metadata', function() {
     await contract.connect(opManager).disableValidator(0, 87646);
     md = await contract.getValidatorsMetadata(0, 1);
     expect(md.disabledAtBlocks[0]).to.equal(87646);
+  });
+
+  it('Should revert with invalid end id', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
+    await contract.connect(opManager).disableValidator(0, 1);
+    expect(contract.getValidatorsMetadata(0, 100)).to.revertedWith("Invalid end id")
+  });
+
+  it('Should revert with invalid start and end ids', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
+    await contract.connect(opManager).disableValidator(0, 1);
+    expect(contract.getValidatorsMetadata(1, 0)).to.revertedWith("Start id must be less than end id")
   });
 });

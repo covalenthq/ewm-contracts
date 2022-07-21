@@ -439,22 +439,21 @@ contract OperationalStaking is OwnableUpgradeable {
         // making sure that amount of rewards exist
         else {
             require(totalValue - s.staked >= amount, "Requested amount is too high");
-            require(amount >= REWARD_REDEEM_THRESHOLD, "Nothing to redeem");
+            require(amount >= REWARD_REDEEM_THRESHOLD, "Requested amount must be higher than redeem threshold");
         }
 
         uint128 amountToRedeem = redeemAll ? totalValue - s.staked : amount;
 
-        if (amountToRedeem != 0) {
-            // "sell/burn" the reward shares
-            uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
-            if (validatorSharesRemove > s.shares) validatorSharesRemove = s.shares;
-            unchecked {
-                v.totalShares -= validatorSharesRemove;
-            }
-            unchecked {
-                s.shares -= validatorSharesRemove;
-            }
+        // "sell/burn" the reward shares
+        uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
+        if (validatorSharesRemove > s.shares) validatorSharesRemove = s.shares;
+        unchecked {
+            v.totalShares -= validatorSharesRemove;
         }
+        unchecked {
+            s.shares -= validatorSharesRemove;
+        }
+
         emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
         _transferFromContract(beneficiary, amountToRedeem);
     }

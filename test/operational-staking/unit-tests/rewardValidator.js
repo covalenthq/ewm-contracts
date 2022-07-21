@@ -25,9 +25,6 @@ const {
 describe('Reward validator', function() {
 
 
-
-
-
   it('Should change reward pool', async function() {
     const [
       opManager,
@@ -111,4 +108,51 @@ describe('Reward validator', function() {
   });
 
 
+  it('Should emit Rewarded failed due to low pool event with correct validatorId and amount', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await deposit(contract, oneToken.mul(10));
+    await addEnabledValidator(
+        0,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        oneToken.div(10),
+    );
+    await stake(oneToken.mul(1000), validator1, cqtContract, contract, 0);
+    expect(await contract.connect(opManager).rewardValidators([0], [ oneToken.mul(1000)]))
+        .to.emit(contract, 'RewardFailedDueLowPool')
+        .withArgs(0, oneToken.mul(1000));
+  });
+
+
+  it('Should emit Rewarded failed due to zero stake  event with correct validatorId and amount ', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await deposit(contract, oneToken.mul(10));
+    await addEnabledValidator(
+        0,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        oneToken.div(10),
+    );
+    expect(await contract.connect(opManager).rewardValidators([0], [ oneToken.mul(10)]))
+        .to.emit(contract, 'RewardFailedDueZeroStake')
+        .withArgs(0, oneToken.mul(10));
+  });
 });
