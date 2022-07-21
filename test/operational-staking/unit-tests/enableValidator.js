@@ -78,4 +78,26 @@ describe('Enable validator', function() {
     details = await contract.getValidatorMetadata(0);
     expect(details.disabledAtBlock).to.equal(0);
   });
+
+  it('Should revert when enabling invalid validator id.', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    expect(contract.connect(opManager).enableValidator(0))
+    .to.revertedWith('Invalid validator');
+    deposit(contract, oneToken.mul(100000));
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 10);
+    await stake(oneToken.mul(1000000), validator1, cqtContract, contract, 0);
+    mineBlocks(10);
+    expect(contract.connect(opManager).enableValidator(1))
+    .to.revertedWith('Invalid validator');
+  });
+
+
 });

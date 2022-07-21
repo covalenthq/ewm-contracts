@@ -100,4 +100,21 @@ describe('Take out reward Tokens', function() {
         .to.emit(contract, 'AllocatedTokensTaken')
         .withArgs(oneToken.mul(100));
   });
+
+  it('Should revert when reward pool is too small.', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await expect(contract.takeOutRewardTokens(oneToken.mul(10000000000))).to.be.revertedWith(
+        'Reward pool is too small',
+    );
+
+  });
+
 });
