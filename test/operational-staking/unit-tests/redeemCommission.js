@@ -285,6 +285,10 @@ describe('Redeem Commission', function() {
         contract.connect(validator1).redeemCommission(0, validator1.address, tokensGiven2.mul(10000)),
     ).to.revertedWith("Requested amount is higher than commission available to redeem");
 
+    await expect(
+      contract.connect(validator1).redeemCommission(0, validator1.address, 0),
+    ).to.revertedWith('The requested amount is 0');
+
     await contract.connect(validator1).redeemAllCommission(0, validator1.address);
     await expect(
         contract.connect(validator1).redeemAllCommission(0, validator1.address),
