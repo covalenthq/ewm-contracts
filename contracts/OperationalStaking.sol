@@ -447,8 +447,7 @@ contract OperationalStaking is OwnableUpgradeable {
         if (amountToRedeem != 0) {
             // "sell/burn" the reward shares
             uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
-            if (validatorSharesRemove > s.shares)
-                validatorSharesRemove = s.shares;
+            if (validatorSharesRemove > s.shares) validatorSharesRemove = s.shares;
             unchecked {
                 v.totalShares -= validatorSharesRemove;
             }
@@ -457,7 +456,7 @@ contract OperationalStaking is OwnableUpgradeable {
             }
         }
         emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
-        _transferFromContract(beneficiary, amountToRedeem );
+        _transferFromContract(beneficiary, amountToRedeem);
     }
 
     function redeemCommission(
@@ -524,7 +523,7 @@ contract OperationalStaking is OwnableUpgradeable {
         v.stakings[newAddress].staked += v.stakings[msg.sender].staked;
         delete v.stakings[msg.sender];
 
-        for (uint i = 0; i < v.unstakings[msg.sender].length; i++) {
+        for (uint256 i = 0; i < v.unstakings[msg.sender].length; i++) {
             v.unstakings[newAddress].push(v.unstakings[msg.sender][i]);
         }
         delete v.unstakings[msg.sender];
@@ -676,5 +675,4 @@ contract OperationalStaking is OwnableUpgradeable {
     }
 
     function renounceOwnership() public virtual override onlyOwner {}
-
 }
