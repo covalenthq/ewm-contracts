@@ -157,18 +157,18 @@ contract OperationalStaking is OwnableUpgradeable {
     function addValidator(address validator, uint128 commissionRate) external onlyStakingManager returns (uint256 id) {
         require(commissionRate < DIVIDER, "Rate must be less than 100%");
         require(validator != address(0), "Validator address is 0");
-        uint128 N = validatorsN; // use current number of validators for the id of a new validator instance
-        _validators[N]._address = validator;
-        _validators[N].exchangeRate = uint128(DIVIDER); // make it 1:1 initially
-        _validators[N].commissionRate = commissionRate;
-        _validators[N].disabledAtBlock = 1; // set it to 1 to indicate that the validator is disabled
+        Validator storage v = _validators[validatorsN]; // use current number of validators for the id of a new validator instance
+        v._address = validator;
+        v.exchangeRate = uint128(DIVIDER); // make it 1:1 initially
+        v.commissionRate = commissionRate;
+        v.disabledAtBlock = 1; // set it to 1 to indicate that the validator is disabled
 
-        emit ValidatorAdded(N, commissionRate, validator);
+        emit ValidatorAdded(validatorsN, commissionRate, validator);
         unchecked {
             validatorsN += 1;
         }
 
-        return N;
+        return validatorsN - 1;
     }
 
     /*
@@ -294,7 +294,7 @@ contract OperationalStaking is OwnableUpgradeable {
         if (isValidator) {
             // the compounded rewards are not included in max stake check
             // hence we use s.staked instead of s.shares for valueStaked calculation
-            uint128 valueStaked = s.staked + _sharesToTokens(sharesAdd, v.exchangeRate);
+            uint128 valueStaked = s.staked + amount;
             require(valueStaked <= validatorMaxStake, "Validator max stake exceeded");
         } else {
             // cannot stake more than validator delegation max cap
@@ -336,7 +336,7 @@ contract OperationalStaking is OwnableUpgradeable {
 
         uint128 sharesRemove = _tokensToShares(amount, v.exchangeRate);
         // "sell/burn" shares
-        // sometimes due to conversion inconsisencies shares to remove might end up being bigger than shares stored
+        // sometimes due to conversion inconsistencies shares to remove might end up being bigger than shares stored
         // so we have to reassign it to allow the full unstake
         if (sharesRemove > s.shares) sharesRemove = s.shares;
 
@@ -368,7 +368,9 @@ contract OperationalStaking is OwnableUpgradeable {
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(us.amount >= amount, "Unstaking has less tokens");
         _stake(validatorId, amount, false);
-        us.amount -= amount;
+        unchecked {
+            us.amount -= amount;
+        }
         // set cool down end to 0 to release gas if new unstaking amount is 0
         if (us.amount == 0) us.coolDownEnd = 0;
         emit RecoveredUnstake(validatorId, msg.sender, amount, unstakingId);
@@ -441,12 +443,10 @@ contract OperationalStaking is OwnableUpgradeable {
         }
 
         uint128 amountToRedeem = redeemAll ? totalValue - s.staked : amount;
-        uint128 stakeRewardToRedeem = amountToRedeem; // this will initially constraint commission paid and regular reward
-        uint128 comissionRewardToRedeem;
 
-        if (stakeRewardToRedeem != 0) {
+        if (amountToRedeem != 0) {
             // "sell/burn" the reward shares
-            uint128 validatorSharesRemove = _tokensToShares(stakeRewardToRedeem, v.exchangeRate);
+            uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
             if (validatorSharesRemove > s.shares)
                 validatorSharesRemove = s.shares;
             unchecked {
@@ -456,8 +456,8 @@ contract OperationalStaking is OwnableUpgradeable {
                 s.shares -= validatorSharesRemove;
             }
         }
-        emit RewardRedeemed(validatorId, beneficiary, stakeRewardToRedeem);
-        _transferFromContract(beneficiary, stakeRewardToRedeem + comissionRewardToRedeem);
+        emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
+        _transferFromContract(beneficiary, amountToRedeem );
     }
 
     function redeemCommission(
@@ -473,7 +473,9 @@ contract OperationalStaking is OwnableUpgradeable {
 
         require(v.commissionAvailableToRedeem > 0, "No commission available to redeem");
         require(amount <= v.commissionAvailableToRedeem, "Requested amount is higher than commission available to redeem");
-        v.commissionAvailableToRedeem -= amount;
+        unchecked {
+            v.commissionAvailableToRedeem -= amount;
+        }
 
         _transferFromContract(beneficiary, amount);
         emit CommissionRewardRedeemed(validatorId, beneficiary, amount);
@@ -494,10 +496,11 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 unstakingId
     ) external {
         require(oldValidatorId < validatorsN, "Invalid validator");
-        require(_validators[oldValidatorId].disabledAtBlock != 0, "Validator is not disabled");
-        require(_validators[oldValidatorId]._address != msg.sender, "Validator cannot redelegate");
-        require(_validators[oldValidatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
-        Unstaking storage us = _validators[oldValidatorId].unstakings[msg.sender][unstakingId];
+        Validator storage v = _validators[oldValidatorId];
+        require(v.disabledAtBlock != 0, "Validator is not disabled");
+        require(v._address != msg.sender, "Validator cannot redelegate");
+        require(v.unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
+        Unstaking storage us = v.unstakings[msg.sender][unstakingId];
         require(us.amount >= amount, "Unstaking has less tokens");
         // stake tokens back to the contract using new validator, set withTransfer to false since the tokens are already in the contract
         _stake(newValidatorId, amount, false);
