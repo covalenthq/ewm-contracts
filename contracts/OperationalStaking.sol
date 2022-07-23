@@ -516,6 +516,7 @@ contract OperationalStaking is OwnableUpgradeable {
     function setValidatorAddress(uint128 validatorId, address newAddress) external {
         Validator storage v = _validators[validatorId];
         require(msg.sender == v._address, "Sender is not the validator");
+        require(v._address != newAddress, "The new address cannot be equal to the current validator address");
         require(newAddress != address(0), "Invalid validator address");
 
         v.stakings[newAddress].shares += v.stakings[msg.sender].shares;
