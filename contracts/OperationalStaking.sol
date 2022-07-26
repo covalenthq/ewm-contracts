@@ -340,11 +340,15 @@ contract OperationalStaking is OwnableUpgradeable {
         // so we have to reassign it to allow the full unstake
         if (sharesRemove > s.shares) sharesRemove = s.shares;
 
-        s.shares -= sharesRemove;
+        unchecked {
+            s.shares -= sharesRemove;
+        }
         v.totalShares -= sharesRemove;
 
         // remove staked tokens
-        s.staked -= amount;
+        unchecked {
+            s.staked -= amount;
+        }
         // create unstaking instance
         uint128 coolDownEnd = uint128(v.disabledAtBlock != 0 ? v.disabledAtBlock : block.number);
         unchecked {
