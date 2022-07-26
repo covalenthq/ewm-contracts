@@ -633,7 +633,6 @@ contract OperationalStaking is OwnableUpgradeable {
 
     /*
      * Returns validator staked and delegated token amounts, including compounded rewards
-     * This function will be called by StakingManager at the beginning of each checkpoint
      */
     function getValidatorCompoundedStakingData(uint128 validatorId) external view returns (uint128 staked, uint128 delegated) {
         Validator storage v = _validators[validatorId];
