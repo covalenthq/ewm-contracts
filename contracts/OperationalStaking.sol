@@ -367,13 +367,13 @@ contract OperationalStaking is OwnableUpgradeable {
         require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(us.amount >= amount, "Unstaking has less tokens");
-        _stake(validatorId, amount, false);
         unchecked {
             us.amount -= amount;
         }
         // set cool down end to 0 to release gas if new unstaking amount is 0
         if (us.amount == 0) us.coolDownEnd = 0;
         emit RecoveredUnstake(validatorId, msg.sender, amount, unstakingId);
+        _stake(validatorId, amount, false);
     }
 
     /*
@@ -501,13 +501,13 @@ contract OperationalStaking is OwnableUpgradeable {
         Unstaking storage us = v.unstakings[msg.sender][unstakingId];
         require(us.amount >= amount, "Unstaking has less tokens");
         // stake tokens back to the contract using new validator, set withTransfer to false since the tokens are already in the contract
-        _stake(newValidatorId, amount, false);
         unchecked {
             us.amount -= amount;
         }
         // set cool down end to 0 to release gas if new unstaking amount is 0
         if (us.amount == 0) us.coolDownEnd = 0;
         emit Redelegated(oldValidatorId, newValidatorId, msg.sender, amount, unstakingId);
+        _stake(newValidatorId, amount, false);
     }
 
     /*
