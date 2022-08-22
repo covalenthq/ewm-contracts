@@ -104,6 +104,7 @@ contract OperationalStaking is OwnableUpgradeable {
     }
 
     function setStakingManagerAddress(address newAddress) external onlyOwner {
+        require(newAddress != address(0));
         stakingManager = newAddress;
         emit StakingManagerAddressChanged(newAddress);
     }
@@ -523,13 +524,12 @@ contract OperationalStaking is OwnableUpgradeable {
         require(v._address != newAddress, "The new address cannot be equal to the current validator address");
         require(newAddress != address(0), "Invalid validator address");
 
+        require(v.unstakings[newAddress].length == 0, "Cannot transfer validator to an address that has unstakings");
+        require(v.stakings[newAddress].shares == 0, "Cannot transfer validator address to a delegator");
         v.stakings[newAddress].shares += v.stakings[msg.sender].shares;
         v.stakings[newAddress].staked += v.stakings[msg.sender].staked;
         delete v.stakings[msg.sender];
-
-        for (uint256 i = 0; i < v.unstakings[msg.sender].length; i++) {
-            v.unstakings[newAddress].push(v.unstakings[msg.sender][i]);
-        }
+        v.unstakings[newAddress] = v.unstakings[msg.sender];
         delete v.unstakings[msg.sender];
 
         v._address = newAddress;

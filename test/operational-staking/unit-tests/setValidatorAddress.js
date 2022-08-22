@@ -173,7 +173,7 @@ describe('Set validator address', function() {
     ).to.be.revertedWith("Sender is not the validator");
   });
 
-  it('Should transfer and merge rewards.', async function() {
+  it('Should revert when transfer to a delegator.', async function() {
     const [
       opManager,
       contract,
@@ -195,40 +195,32 @@ describe('Set validator address', function() {
     await stake(oneToken.mul(10), validator2, cqtContract, contract, 0)
     await contract.connect(opManager).rewardValidators([0],[oneToken])
 
-    await contract.connect(validator1).setValidatorAddress(0, VALIDATOR_2);
-    details = await contract.getDelegatorMetadata(VALIDATOR_1, 0)
-    expect(details.rewards).to.equal(0);
+    await expect(contract.connect(validator1).setValidatorAddress(0, VALIDATOR_2)).to.revertedWith("Cannot transfer validator address to a delegator");
 
-    details = await contract.getDelegatorMetadata(VALIDATOR_2, 0)
-    expect(details.rewards).to.closeTo(reward.mul(2), 10000);
   });
 
-  it('Should transfer and merge stakings.', async function() {
-    const [
-      opManager,
-      contract,
-      cqtContract,
-      validator1,
-      validator2,
-      delegator1,
-      delegator2,
-    ] = await getAll();
-    await contract.connect(opManager).setStakingManagerAddress(opManager.address);
-    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 10);
-    await stake(oneToken, validator1, cqtContract, contract, 0)
-    await stake(oneToken, validator2, cqtContract, contract, 0)
-    let details = await contract.getDelegatorMetadata(VALIDATOR_1, 0)
-    expect(details.staked).to.equal(oneToken);
+  // it('Should revert when transfer to a delegator with unstakings.', async function() {
+  //   const [
+  //     opManager,
+  //     contract,
+  //     cqtContract,
+  //     validator1,
+  //     validator2,
+  //     delegator1,
+  //     delegator2,
+  //   ] = await getAll();
+  //   await contract.connect(opManager).setStakingManagerAddress(opManager.address);
+  //   await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 10);
+  //   await stake(oneToken, validator1, cqtContract, contract, 0)
+  //   await stake(oneToken, validator2, cqtContract, contract, 0)
+  //   let details = await contract.getDelegatorMetadata(VALIDATOR_1, 0)
+  //   expect(details.staked).to.equal(oneToken);
 
-    await contract.connect(validator1).setValidatorAddress(0, VALIDATOR_2);
-    details = await contract.getDelegatorMetadata(VALIDATOR_1, 0)
-    expect(details.staked).to.equal(0);
+  //   await expect(contract.connect(validator1).setValidatorAddress(0, VALIDATOR_2)).to.revertedWith("Cannot transfer validator address to a delegator");
 
-    details = await contract.getDelegatorMetadata(VALIDATOR_2, 0)
-    expect(details.staked).to.equal(oneToken.mul(2));
-  });
+  // });
 
-  it('Should transfer and merge unstakings.', async function() {
+  it('Should revert when transfer to a delegator with unstakings.', async function() {
     const [
       opManager,
       contract,
@@ -259,23 +251,8 @@ describe('Set validator address', function() {
     let cooldown3 = details2.unstakingsEndEpochs[0]
     let cooldown4 = details2.unstakingsEndEpochs[1]
 
-    await contract.connect(validator1).setValidatorAddress(0, VALIDATOR_2);
-    details = await contract.getDelegatorMetadata(VALIDATOR_1, 0)
-    expect(details.staked).to.equal(0);
-    expect(details.unstakingAmounts.length).to.equal(0);
-    expect(details.unstakingsEndEpochs.length).to.equal(0);
+    await expect(contract.connect(validator1).setValidatorAddress(0, VALIDATOR_2)).to.revertedWith("Cannot transfer validator to an address that has unstakings");
 
-    details = await contract.getDelegatorMetadata(VALIDATOR_2, 0)
-    expect(details.staked).to.equal(oneToken.mul(297));
-    expect(details.unstakingAmounts[0]).to.equal(oneToken);
-    expect(details.unstakingAmounts[1]).to.equal(oneToken.mul(20));
-    expect(details.unstakingsEndEpochs[0]).to.equal(cooldown3);
-    expect(details.unstakingsEndEpochs[1]).to.equal(cooldown4);
-
-    expect(details.unstakingAmounts[2]).to.equal(oneToken.mul(2));
-    expect(details.unstakingAmounts[3]).to.equal(oneToken.mul(10));
-    expect(details.unstakingsEndEpochs[2]).to.equal(cooldown1);
-    expect(details.unstakingsEndEpochs[3]).to.equal(cooldown2);
   });
 
   it('Should revert when the new address is 0.', async function() {
@@ -294,7 +271,7 @@ describe('Set validator address', function() {
         contract.connect(validator1).setValidatorAddress(0, "0x0000000000000000000000000000000000000000")
     ).to.be.revertedWith("Invalid validator address");
   });
- 
+
   it('Should revert when the new address is the old one.', async function() {
     const [
       opManager,
