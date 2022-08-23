@@ -54,4 +54,19 @@ describe('Set staking manager address', function() {
         .to.emit(contract, 'StakingManagerAddressChanged')
         .withArgs(OPERATOR_2);
   });
+
+  it('Should revert when set to zero address.', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await expect(contract.setStakingManagerAddress("0x0000000000000000000000000000000000000000"))
+        .to.revertedWith('Invalid address');
+  });
+
 });

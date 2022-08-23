@@ -137,4 +137,22 @@ describe('Get delegator metadata', function() {
     md = await contract.getDelegatorMetadata(delegator1.address, 0);
     expect(md.unstakingsEndEpochs[0]).to.equal(r3.blockNumber + 10);
   });
+
+
+  it('Should revert when validator id is invalid', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
+    await expect(contract.getDelegatorMetadata(delegator1.address, 1)).to.revertedWith("Invalid validator");
+    await expect(contract.getDelegatorMetadata(delegator1.address, 10)).to.revertedWith("Invalid validator");
+  });
+
+
 });

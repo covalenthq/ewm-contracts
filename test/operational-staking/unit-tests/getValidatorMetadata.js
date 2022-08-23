@@ -147,4 +147,23 @@ describe('Get validator metadata', function() {
     md = await contract.getValidatorMetadata(0);
     expect(md.disabledAtBlock).to.equal(87646);
   });
+
+  it('Should revert when validator id is invalid', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    // deposit(contract, oneToken.mul(100000))
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
+    await expect(contract.getValidatorMetadata(10)).to.revertedWith("Invalid validator");
+    await expect(contract.getValidatorMetadata(1)).to.revertedWith("Invalid validator");
+    await expect(contract.getValidatorMetadata(2)).to.revertedWith("Invalid validator");
+
+  });
+
 });

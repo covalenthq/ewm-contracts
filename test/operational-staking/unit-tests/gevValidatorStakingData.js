@@ -76,4 +76,26 @@ describe('Get validator staking data', function() {
     md = await contract.getValidatorStakingData(0);
     expect(md.delegated).to.equal(oneToken.mul(100));
   });
+
+  it('Should revert when validator id is invalid', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    deposit(contract, oneToken.mul(1000));
+    await addEnabledValidator(
+        0,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        oneToken.div(10),
+    );
+    await expect(contract.getValidatorStakingData(2)).to.revertedWith("Invalid validator");
+  });
+
 });

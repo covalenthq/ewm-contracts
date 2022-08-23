@@ -288,4 +288,23 @@ describe('Set validator address', function() {
         contract.connect(validator1).setValidatorAddress(0, VALIDATOR_1)
     ).to.be.revertedWith("The new address cannot be equal to the current validator address");
   });
+
+  it('Should revert when the validator id is invalid.', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await contract.setStakingManagerAddress(opManager.address);
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 10);
+    await expect(
+        contract.connect(validator1).setValidatorAddress(10, VALIDATOR_1)
+    ).to.be.revertedWith("Invalid validator");
+  });
+
 });
+
