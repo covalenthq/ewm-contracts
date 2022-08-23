@@ -104,7 +104,7 @@ contract OperationalStaking is OwnableUpgradeable {
     }
 
     function setStakingManagerAddress(address newAddress) external onlyOwner {
-        require(newAddress != address(0));
+        require(newAddress != address(0), "Invalid address");
         stakingManager = newAddress;
         emit StakingManagerAddressChanged(newAddress);
     }
