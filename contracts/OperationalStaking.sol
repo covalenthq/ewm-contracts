@@ -519,6 +519,7 @@ contract OperationalStaking is OwnableUpgradeable {
      * Changes the validator staking address
      */
     function setValidatorAddress(uint128 validatorId, address newAddress) external {
+        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         require(msg.sender == v._address, "Sender is not the validator");
         require(v._address != newAddress, "The new address cannot be equal to the current validator address");
@@ -570,6 +571,7 @@ contract OperationalStaking is OwnableUpgradeable {
             uint256 disabledAtBlock
         )
     {
+        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         return (v._address, v.stakings[v._address].staked, v.delegated, v.commissionRate, v.disabledAtBlock);
     }
@@ -627,6 +629,7 @@ contract OperationalStaking is OwnableUpgradeable {
      * Returns validator staked and delegated token amounts, excluding compounded rewards
      */
     function getValidatorStakingData(uint128 validatorId) external view returns (uint128 staked, uint128 delegated) {
+        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         return (v.stakings[v._address].staked, v.delegated);
     }
@@ -658,6 +661,7 @@ contract OperationalStaking is OwnableUpgradeable {
             uint128[] memory unstakingsEndEpochs
         )
     {
+        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[delegator];
         staked = s.staked;
