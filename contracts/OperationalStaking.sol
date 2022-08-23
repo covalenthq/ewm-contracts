@@ -176,6 +176,7 @@ contract OperationalStaking is OwnableUpgradeable {
      * Reward emission
      */
     function rewardValidators(uint128[] calldata ids, uint128[] calldata amounts) external onlyStakingManager {
+        require(ids.length == amounts.length, "Given ids and amounts arrays must be of the same length");
         uint128 newRewardPool = rewardPool;
         uint128 amount;
         uint128 validatorId;
