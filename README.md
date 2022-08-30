@@ -77,6 +77,7 @@ Delegators pay commission fees from their earned reward based on the commission 
   Assuming validator_max_cap_multiplier is set to `10`, then a validator comes and stakes 1 million tokens. The max cap of the validator is `10 * 1 million = 10 million`. So delegator `A` comes and delegates `3 million`, delegator `B` - `2 million`, and delegator `C` - `5 million`. In other words, the total number of tokens delegated already equals the maximum cap of `10 million`. Thus, a new delegator 'D' cannot delegate tokens to the validator unless someone unstakes their tokens.
 - A validator cannot unstake tokens that would reduce the maximum cap below what is already delegated. If a validator is willing to do so, the validator will have to disable itself through the StakingManager. The delegators will stop earning the rewards from that validator, but they will have an option to redelegate tokens to another validator without a cool down period. The validator can enable its instance back through the StakingManager.
 - It is allowed for the same validator address to have multiple ids.
+- When changing its address a validator cannot transfer unstakings if there are more than 300 of them. This is to ensure the contract does not revert from too much gas used. In case if there are more than 300 unstakings, there is an option to transfer the address without unstakings.
 
 ### Additional constainsts:
 - Due to potential conversion overflow and precision loss there is a constaint that requires the staked and rewards amounts to be greater than REWARD_REDEEM_THRESHOLD. Currently it is set to 0.0000000001 CQT. Hence, if not the full amount is unstaked or redeem there is a potential lock of the remaining 0.0000000001.
@@ -115,6 +116,7 @@ An unstaked amount can always be recovered: The unstaked amount (partially or in
 - Unstake
 - Transfer out unlocked unstake
 - Restake back unstake
+- Change validators' address
 
 _Note: Validators cannot set their commission rate, and if they wish to change it, they must contact Covalent. Commission rates are initially set when the StakingManager adds a validator for the first time._
 
