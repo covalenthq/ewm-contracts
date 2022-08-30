@@ -80,7 +80,7 @@ contract OperationalStaking is OwnableUpgradeable {
 
     event ValidatorEnabled(uint128 indexed validatorId);
 
-    event ValidatorAddressChanged(uint128 indexed validatorId, address indexed newAddress);
+    event ValidatorAddressChanged(uint128 indexed validatorId, address indexed newAddress, bool indexed withUnstakings);
 
     modifier onlyStakingManager() {
         require(stakingManager == msg.sender, "Caller is not stakingManager");
@@ -517,25 +517,34 @@ contract OperationalStaking is OwnableUpgradeable {
     }
 
     /*
-     * Changes the validator staking address
+     * Changes the validator staking address, this will transfer validator staking data and optionally unstakings
      */
-    function setValidatorAddress(uint128 validatorId, address newAddress) external {
-        require(validatorId < validatorsN, "Invalid validator");
+    function setValidatorAddress(
+        uint128 validatorId,
+        address newAddress,
+        bool withUnstakings
+    ) external {
         Validator storage v = _validators[validatorId];
         require(msg.sender == v._address, "Sender is not the validator");
         require(v._address != newAddress, "The new address cannot be equal to the current validator address");
         require(newAddress != address(0), "Invalid validator address");
 
-        require(v.unstakings[newAddress].length == 0, "Cannot transfer validator to an address that has unstakings");
-        require(v.stakings[newAddress].shares == 0, "Cannot transfer validator address to a delegator");
         v.stakings[newAddress].shares += v.stakings[msg.sender].shares;
         v.stakings[newAddress].staked += v.stakings[msg.sender].staked;
         delete v.stakings[msg.sender];
-        v.unstakings[newAddress] = v.unstakings[msg.sender];
-        delete v.unstakings[msg.sender];
 
+        if (withUnstakings) {
+            Unstaking[] storage oldUnstakings = v.unstakings[msg.sender];
+            uint256 length = oldUnstakings.length;
+            require(length <= 300, "Cannot transfer more than 300 unstakings");
+            Unstaking[] storage newUnstakings = v.unstakings[newAddress];
+            for (uint128 i = 0; i < length; ++i) {
+                newUnstakings.push(oldUnstakings[i]);
+            }
+            delete v.unstakings[msg.sender];
+        }
         v._address = newAddress;
-        emit ValidatorAddressChanged(validatorId, newAddress);
+        emit ValidatorAddressChanged(validatorId, newAddress, withUnstakings);
     }
 
     /*
