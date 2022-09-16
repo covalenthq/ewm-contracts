@@ -1,11 +1,11 @@
 const { ethers } = require('hardhat');
 
-const stakingAddress = process.env.STAKING_ADDRESS
+const proofChainAddress = process.env.PROOFCHAIN_ADDRESS
 
 async function main() {
-    const OperationalStakingV2 = await ethers.getContractFactory("OperationalStaking");
+    const ProofChainV2 = await ethers.getContractFactory("ProofChain");
     console.log("Preparing proposal...");
-    const proposal = await defender.proposeUpgrade(stakingAddress, OperationalStakingV2);
+    const proposal = await defender.proposeUpgrade(proofChainAddress, ProofChainV2);
     console.log("Upgrade proposal created at:", proposal.url);
 }
 
