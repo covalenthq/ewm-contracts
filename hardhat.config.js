@@ -5,6 +5,7 @@ require('hardhat-gas-reporter');
 require('hardhat-abi-exporter');
 require('solidity-coverage');
 require('hardhat-contract-sizer');
+require("@openzeppelin/hardhat-defender");
 
 
 module.exports = {
@@ -58,6 +59,15 @@ module.exports = {
         },
         test: {
             url: 'http://127.0.0.1:8545/',
+        },
+        moonbeam: {
+            url: process.env.MOONBEAM_NODE,
+            accounts : [process.env.MOONBEAM_ACCOUNT_1]
         }
     },
+    defender: {
+        apiKey: process.env.DEFENDER_API_KEY,
+        apiSecret: process.env.DEFENDER_SECRET_KEY,
+    },
+
 };
