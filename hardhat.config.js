@@ -58,7 +58,7 @@ module.exports = {
         hardhat: {
             chainId: 1,
             forking: {
-                url:  process.env.ERIGON_NODE,
+                url:  process.env.ETHEREUM_NODE,
                 blockNumber: 13182263,
             },
         },
