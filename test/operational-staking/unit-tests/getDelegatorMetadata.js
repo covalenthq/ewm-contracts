@@ -6,7 +6,7 @@ const {
   VALIDATOR_1,
   VALIDATOR_2,
   OPERATOR_1,
-  getDeployedContracts,
+  deployStaking,
   OPERATOR_2,
   DELEGATOR_1,
   DELEGATOR_2,
@@ -97,7 +97,7 @@ describe('Get delegator metadata', function() {
 
   it('Should return correct end epochs of unstakings', async function() {
     const [
-      _opManager,
+      owner,
       _contract,
       cqtContract,
       validator1,
@@ -105,13 +105,14 @@ describe('Get delegator metadata', function() {
       delegator1,
       delegator2,
     ] = await getAll();
-    const [opManager, contract] = await getDeployedContracts(
+    const contract = await deployStaking([
         CQT_ETH_MAINNET,
         10,
         20,
         5,
-        oneToken.mul(100000),
-    ); // cqt, delegatorCoolDown, validatorCoolDown, maxCapMultiplier, vMaxStakeCap)
+        oneToken.mul(100000)
+    ])
+    await contract.connect(owner).setStakingManagerAddress(owner.address)
 
     const required = oneToken.mul(10000);
     await contract.setMaxCapMultiplier(20);
@@ -119,7 +120,7 @@ describe('Get delegator metadata', function() {
     await addEnabledValidator(
         0,
         contract,
-        opManager,
+        owner,
         VALIDATOR_1,
         1000000000000,
     );

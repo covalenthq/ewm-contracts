@@ -1,12 +1,12 @@
 const erc20abi = require('../abis/erc20.json');
 const createKeccakHash = require('keccak');
-const {ethers} = require('hardhat');
+const { ethers } = require('hardhat');
 const hre = require('hardhat');
-
+const CQT_ABI = require('../abis/erc20.json');
+const STAKING_ABI = require('../generated-abis/ugly/OperationalStaking.json');
+const PROOFCHAIN_ABI = require('../generated-abis/ugly/ProofChain.json');
 const oneToken = ethers.BigNumber.from('1000000000000000000');
-
-const CQT_ETH_MAINNET = '0xD417144312DbF50465b1C641d016962017Ef6240';
-
+const ETHEREUM_CQT_ADDRESS = process.env.ETHEREUM_CQT_ADDRESS;
 
 const OWNER = '0x8D1f2eBFACCf1136dB76FDD1b86f1deDE2D23852';
 const WHALE = '0x189B9cBd4AfF470aF2C0102f365FC1823d857965';
@@ -70,21 +70,21 @@ const impersonate = async (address) =>
   });
 
 const impersonateAll = async () => {
-  let ALL = [OWNER, WHALE, ...TOKEN_HOLDERS_ADDRESSES, ...VALIDATOR_ADDRESSES, ...OPERATOR_ADDRESSES, ...DELEGATOR_ADDRESSES ]
+  let ALL = [OWNER, WHALE, ...TOKEN_HOLDERS_ADDRESSES, ...VALIDATOR_ADDRESSES, ...OPERATOR_ADDRESSES, ...DELEGATOR_ADDRESSES];
   for (let i = 0; i < ALL.length; i++)
-    await impersonate(ALL[i])
-}
+    await impersonate(ALL[i]);
+};
 
 const getTokenHolders = async () => {
-  let holders = await getSigners(TOKEN_HOLDERS_ADDRESSES)
+  let holders = await getSigners(TOKEN_HOLDERS_ADDRESSES);
   await giveEth('10.0', holders);
   return holders;
-}
+};
 
 const mineBlocks = async (n) => {
   for (let i = 0; i < n; i++)
     await hre.network.provider.send('evm_mine');
-}
+};
 
 const giveEth = async (amount, holders) => {
   let giver = await ethers.getSigner(WHALE);
@@ -94,61 +94,52 @@ const giveEth = async (amount, holders) => {
       value: ethers.utils.parseEther(amount),
     });
   }
-}
+};
 
-const getOwner = async () => await ethers.getSigner(OWNER);
-const getValidator1 = async () => await ethers.getSigner(VALIDATOR_ADDRESSES[0]);
-const getValidator2 = async () => await ethers.getSigner(VALIDATOR_ADDRESSES[1]);
-const getValidator3 = async () => await ethers.getSigner(VALIDATOR_ADDRESSES[2]);
-const getValidator4 = async () => await ethers.getSigner(VALIDATOR_ADDRESSES[3]);
-const getOperator1 = async () => await ethers.getSigner(OPERATOR_ADDRESSES[0]);
-const getOperator2 = async () => await ethers.getSigner(OPERATOR_ADDRESSES[1]);
-const getOperator3 = async () => await ethers.getSigner(OPERATOR_ADDRESSES[2]);
-const getOperator4 = async () => await ethers.getSigner(OPERATOR_ADDRESSES[3]);
-const getDelegator1 = async () => await ethers.getSigner(DELEGATOR_ADDRESSES[0]);
-const getDelegator2 = async () => await ethers.getSigner(DELEGATOR_ADDRESSES[1]);
+const getOwner = async () => {
+  await impersonate(OWNER);
+  return await ethers.getSigner(OWNER);
+};
 
-const getCqtContract = async () => new ethers.Contract(CQT_ETH_MAINNET, erc20abi, await getOwner());
+const getCqtContract = async () => new ethers.Contract(ETHEREUM_CQT_ADDRESS, erc20abi, await getOwner());
 
 const getAll = async () => {
+
   const validatorCoolDown = 180 * 6646; // ~ 6 months
   const delegatorCoolDown = 28 * 6646; // ~ 28 days
-   return await getAllWithCoolDown(
-      CQT_ETH_MAINNET,
-      delegatorCoolDown,
-      validatorCoolDown,
-      2,
-      oneToken.mul(10000000),
-  );
-}
-
-const getAllWithCoolDown = async (
-    cqt,
+  return await getAllWithCoolDown(
+    ETHEREUM_CQT_ADDRESS,
     delegatorCoolDown,
     validatorCoolDown,
-    maxCapM,
-    maxStakeCap,
-) => {
-  const [owner, contract] = await getDeployedContracts(
-      cqt,
-      delegatorCoolDown,
-      validatorCoolDown,
-      maxCapM,
-      maxStakeCap,
+    2,
+    oneToken.mul(10000000),
   );
+};
+
+const getAllWithCoolDown = async (
+  cqt,
+  delegatorCoolDown,
+  validatorCoolDown,
+  maxCapM,
+  maxStakeCap,
+) => {
+
+  const owner = await getOwner();
+  const contract = await deployStaking([cqt, delegatorCoolDown, validatorCoolDown, maxCapM, maxStakeCap]);
+  await contract.connect(owner).setStakingManagerAddress(owner.address);
   const cqtContract = await getCqtContract();
   const members = [
-    await getValidator1(),
-    await getValidator2(),
-    await getDelegator1(),
-    await getDelegator2(),
-    await getValidator3(),
-    await getValidator4()
-  ]
+    await ethers.getSigner(VALIDATOR_ADDRESSES[0]),
+    await ethers.getSigner(VALIDATOR_ADDRESSES[1]),
+    await ethers.getSigner(DELEGATOR_ADDRESSES[0]),
+    await ethers.getSigner(DELEGATOR_ADDRESSES[1]),
+    await ethers.getSigner(VALIDATOR_ADDRESSES[2]),
+    await ethers.getSigner(VALIDATOR_ADDRESSES[3])
+  ];
 
   await giveEth('10.0', [owner, ...members]);
-  return [ owner, contract, cqtContract, ...members];
-}
+  return [owner, contract, cqtContract, ...members];
+};
 
 const getMetadata = async (contract) => await contract.getMetadata();
 const getRewardsLocked = async (contract) => (await contract.getMetadata())._rewardPool;
@@ -162,81 +153,56 @@ const getDelegatorCoolDown = async (contract) => (await contract.getMetadata()).
 const addEnabledValidator = async (id, contract, opManager, vAddress, cRate) => {
   await contract.connect(opManager).addValidator(vAddress, cRate);
   await contract.connect(opManager).enableValidator(id);
-}
+};
 
-const getDeployedContractsDefault = async () => await getDeployedContracts( CQT_ETH_MAINNET, 5, 10, 2, oneToken.mul(100000));
-
-const getDeployedContracts = async (
-    cqt,
-    delegatorCoolDown,
-    validatorCoolDown,
-    maxCapMultiplier,
-    vMaxStakeCap,
-) => {
+const deployUpgradeableContract = async (contractName, owner, params) => {
   await impersonateAll();
-  const owner = await getOwner();
+  const factory = await ethers.getContractFactory(contractName, owner);
+  const contract = await upgrades.deployProxy(factory, params, { initializer: 'initialize' });
+  return await contract.deployed();
+};
 
-  const staking = await ethers.getContractFactory('OperationalStaking', owner);
-  const contract = await upgrades.deployProxy(
-      staking,
-      [cqt, delegatorCoolDown, validatorCoolDown, maxCapMultiplier, vMaxStakeCap],
-      {initializer: 'initialize'},
-  );
-  const stakingContract = await contract.deployed();
+const deployStakingWithDefaultParams = async () => await deployStaking([ETHEREUM_CQT_ADDRESS, 5, 10, 2, oneToken.mul(100000)]);
+const deployStaking = async (params) => await deployUpgradeableContract('OperationalStaking', await getOwner(), params);
 
-  await stakingContract.connect(owner).setStakingManagerAddress(owner.address);
-
-  return [owner, stakingContract];
-}
 
 const deposit = async (contract, amount) => {
   const cqtContract = await getCqtContract();
   await cqtContract.approve(contract.address, amount);
   await contract.depositRewardTokens(amount);
-}
+};
 
 const stake = async (amount, signer, cqtContract, contract, id) => {
   await cqtContract.connect(signer).approve(contract.address, amount);
   await contract.connect(signer).stake(id, amount);
-}
+};
 
 
-const getAllWithProofchain = async () =>
-  getAllWithCoolDownWithProofchain(
-      CQT_ETH_MAINNET,
-      28 * 6646, // delegator cool down 28 days
-      180 * 6646, // validator cool down 6 months
-      2,
-      oneToken.mul(10000000),
-  );
-
-
-const getSigners = async(addresses) => {
-  let signers = []
+const getSigners = async (addresses) => {
+  let signers = [];
   for (i = 0; i < addresses.length; i++)
     signers.push(await ethers.getSigner(addresses[i]));
-  return signers
-}
+  return signers;
+};
 
-const getAllWithCoolDownWithProofchain = async (
-    cqt,
-    delegatorCoolDown,
-    validatorCoolDown,
-    maxCapM,
-    maxStakeCap,
-) => {
-  const [owner, staking, proofChain] =
-    await getDeployedContractsWithProofchain(
-      cqt, delegatorCoolDown, validatorCoolDown, maxCapM, maxStakeCap);
+const getAllWithProofchain = async () => {
+
+  const staking = await deployStakingWithDefaultParams();
+  const owner = await getOwner();
+  const proofChain = await deployUpgradeableContract('ProofChain', owner, [owner.address, staking.address]);
+
+  await proofChain.connect(owner).setNthBlock(1, 1);
+  await staking.connect(owner).setStakingManagerAddress(owner.address);
+
   const cqtContract = await getCqtContract();
 
-  let validators = await getSigners(VALIDATOR_ADDRESSES)
-  let operators = await getSigners(OPERATOR_ADDRESSES)
-  let delegators = await getSigners(DELEGATOR_ADDRESSES)
+  let validators = await getSigners(VALIDATOR_ADDRESSES);
+  let operators = await getSigners(OPERATOR_ADDRESSES);
+  let delegators = await getSigners(DELEGATOR_ADDRESSES);
 
   await giveEth('1.0', [owner, ...validators, ...operators, ...delegators]);
 
-   return [
+  return [
     owner,
     staking,
     cqtContract,
@@ -245,43 +211,26 @@ const getAllWithCoolDownWithProofchain = async (
     operators,
     delegators,
   ];
-}
+};
 
-const getDeployedContractsWithProofchain = async (
-    cqt,
-    delegatorCoolDown,
-    validatorCoolDown,
-    maxCapMultiplier,
-    vMaxStakeCap,
+
+const setupWithDefaultParameters = async (
 ) => {
-  await impersonateAll();
-  const owner = await getOwner();
+  rewardPool = oneToken.mul(100000);
+  maxCapMultiplier = 10;
+  maxStakeLimit = oneToken.mul(175000);
+  bspStakeRequired = oneToken.mul(100);
+  blockSpecimenReward = oneToken.mul(1);
+  specimenQuorumThreshold = BigInt(10 ** 18); // 100%
 
-  const staking = await ethers.getContractFactory('OperationalStaking', owner);
-  const contract = await upgrades.deployProxy(
-      staking,
-      [cqt, delegatorCoolDown, validatorCoolDown, maxCapMultiplier, vMaxStakeCap],
-      {initializer: 'initialize'},
-  );
-  const stakingContract = await contract.deployed();
-
-  ProofChainFactory = await ethers.getContractFactory('ProofChain', owner);
-  proofChain = await ProofChainFactory.deploy();
-  await proofChain.initialize(owner.address, stakingContract.address);
-  await proofChain.connect(owner).setNthBlock(1, 1);
-  await stakingContract.connect(owner).setStakingManagerAddress(owner.address);
-
-  return [owner, stakingContract, proofChain];
-}
-
-const setupWithParameters = async (
+  parameters = [
     rewardPool,
     maxCapMultiplier,
     maxStakeLimit,
     bspStakeRequired,
     blockSpecimenReward,
     specimenQuorumThreshold,
-) => {
+  ];
   [
     owner,
     stakingContract,
@@ -292,7 +241,7 @@ const setupWithParameters = async (
     delegators,
   ] = await getAllWithProofchain();
 
-  await deposit(stakingContract, rewardPool)
+  await deposit(stakingContract, rewardPool);
 
   await stakingContract.connect(owner).setStakingManagerAddress(proofChain.address);
   await stakingContract.connect(owner).setMaxCapMultiplier(maxCapMultiplier);
@@ -302,13 +251,13 @@ const setupWithParameters = async (
   await proofChain.connect(owner).setBlockSpecimenReward(blockSpecimenReward);
   await proofChain.connect(owner).setQuorumThreshold(oneToken.div(2));
 
-  await  proofChain.connect(owner).setChainSyncData(1, 1, 1, 1)
-  await  proofChain.connect(owner).setSecondsPerBlock(1)
-  await  proofChain.connect(owner).setMaxSubmissionsPerBlockHeight(1, 3)
-  await  proofChain.connect(owner).setNthBlock(1, 1)
-  await proofChain.connect(owner).setBlockHeightSubmissionsThreshold(1, 100000000)
+  await proofChain.connect(owner).setChainSyncData(1, 1, 1, 1);
+  await proofChain.connect(owner).setSecondsPerBlock(1);
+  await proofChain.connect(owner).setMaxSubmissionsPerBlockHeight(1, 3);
+  await proofChain.connect(owner).setNthBlock(1, 1);
+  await proofChain.connect(owner).setBlockHeightSubmissionsThreshold(1, 100000000);
 
-   return [
+  return [[
     owner,
     stakingContract,
     cqtContract,
@@ -316,36 +265,9 @@ const setupWithParameters = async (
     validators,
     operators,
     delegators,
-  ];
-}
+  ], parameters];
+};
 
-const setupWithDefaultParameters = async () => {
-  rewardPool = oneToken.mul(100000);
-  maxCapMultiplier = 10;
-  maxStakeLimit = oneToken.mul(175000);
-  bspStakeRequired = oneToken.mul(100);
-  blockSpecimenReward = oneToken.mul(1);
-  specimenQuorumThreshold = BigInt(10 ** 18); // 100%
-
-  contractsAndAccounts = await setupWithParameters(
-      rewardPool,
-      maxCapMultiplier,
-      maxStakeLimit,
-      bspStakeRequired,
-      blockSpecimenReward,
-      specimenQuorumThreshold,
-  );
-  parameters = [
-    rewardPool,
-    maxCapMultiplier,
-    maxStakeLimit,
-    bspStakeRequired,
-    blockSpecimenReward,
-    specimenQuorumThreshold,
-  ];
-
-  return [contractsAndAccounts, parameters];
-}
 
 const setupDefaultOperators = async () => {
   [contractsAndAccounts, parameters] = await setupWithDefaultParameters();
@@ -367,15 +289,21 @@ const setupDefaultOperators = async () => {
     operator = operators[validatorId];
 
     await proofChain.connect(owner).addValidator(validator.address, commissionRate);
-    await stake(stakeAmount, validator, cqtContract, stakingContract, validatorId)
+    await stake(stakeAmount, validator, cqtContract, stakingContract, validatorId);
     await proofChain.connect(owner).addBSPOperator(operator.address, validatorId);
     await proofChain.connect(validator).enableBSPOperator(operator.address);
   }
 
   return [contractsAndAccounts, parameters];
-}
+};
 
 const getHash = (str) => '0x' + createKeccakHash('keccak256').update(str).digest('hex');
+
+async function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 
 exports.stake = stake;
@@ -392,18 +320,17 @@ exports.getCQTaddress = getCQTaddress;
 exports.getValidatorMinStakedRequired = getValidatorMinStakedRequired;
 exports.getValidatorCoolDown = getValidatorCoolDown;
 exports.getDelegatorCoolDown = getDelegatorCoolDown;
-exports.getDeployedContractsDefault = getDeployedContractsDefault;
-exports.getDeployedContracts = getDeployedContracts;
+exports.deployStakingWithDefaultParams = deployStakingWithDefaultParams;
+exports.deployStaking = deployStaking;
 exports.impersonateAll = impersonateAll;
 exports.addEnabledValidator = addEnabledValidator;
 exports.getAllWithProofchain = getAllWithProofchain;
-exports.setupWithParameters = setupWithParameters;
 exports.setupWithDefaultParameters = setupWithDefaultParameters;
 exports.setupDefaultOperators = setupDefaultOperators;
-exports.getDeployedContractsWithProofchain = getDeployedContractsWithProofchain;
 exports.getCqtContract = getCqtContract;
 exports.giveEth = giveEth;
 exports.getHash = getHash;
+exports.sleep = sleep;
 
 exports.oneToken = oneToken;
 exports.OWNER = OWNER;
@@ -417,8 +344,8 @@ exports.OPERATOR_3 = OPERATOR_ADDRESSES[3];
 exports.OPERATOR_4 = OPERATOR_ADDRESSES[4];
 exports.DELEGATOR_1 = DELEGATOR_ADDRESSES[0];
 exports.DELEGATOR_2 = DELEGATOR_ADDRESSES[1];
-exports.CQT = CQT_ETH_MAINNET;
-exports.CQT_ETH_MAINNET = CQT_ETH_MAINNET;
+exports.CQT = ETHEREUM_CQT_ADDRESS;
+exports.CQT_ETH_MAINNET = ETHEREUM_CQT_ADDRESS;
 exports.GOVERNANCE_ROLE = GOVERNANCE_ROLE;
 exports.AUDITOR_ROLE = AUDITOR_ROLE;
 exports.BLOCK_SPECIMEN_PRODUCER_ROLE = BLOCK_SPECIMEN_PRODUCER_ROLE;

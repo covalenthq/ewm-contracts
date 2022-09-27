@@ -9,6 +9,10 @@ require("@openzeppelin/hardhat-defender");
 
 
 module.exports = {
+    // defender: {
+    //     apiKey: process.env.DEFENDER_API_KEY,
+    //     apiSecret: process.env.DEFENDER_SECRET_KEY,
+    // },
     solidity: {
         version: '0.8.13',
         settings: {
@@ -32,42 +36,34 @@ module.exports = {
         timeout: 20000,
     },
     abiExporter: [{
-            path: './generated-abis/ugly',
-            clear: true,
-            flat: true,
-            spacing: 2,
-        },
-        {
-            path: './generated-abis/pretty',
-            pretty: true,
-        },
+        path: './generated-abis/ugly',
+        clear: true,
+        flat: true,
+        spacing: 2,
+    },
+    {
+        path: './generated-abis/pretty',
+        pretty: true,
+    },
     ],
     contractSizer: {
         alphaSort: true,
         disambiguatePaths: false,
         runOnCompile: true,
-        strict: true
-      },
+        strict: true,
+        only: [':ProofChain$'],
+    },
     defaultNetwork: 'hardhat',
     networks: {
         hardhat: {
             chainId: 1,
             forking: {
-                url: "http://you.rpc.url.here",
+                url:  process.env.ERIGON_NODE,
                 blockNumber: 13182263,
             },
         },
         test: {
-            url: 'http://127.0.0.1:8545/',
-        },
-        moonbeam: {
-            url: process.env.MOONBEAM_NODE,
-            accounts : [process.env.MOONBEAM_ACCOUNT_1]
+            url: 'http://0.0.0.0:8545/',
         }
     },
-    defender: {
-        apiKey: process.env.DEFENDER_API_KEY,
-        apiSecret: process.env.DEFENDER_SECRET_KEY,
-    },
-
 };
