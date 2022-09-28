@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
 env:
-  ERIGON_NODE: ${{ secrets.ETHEREUM_NODE }}
+  ETHEREUM_NODE: ${{ secrets.ETHEREUM_NODE }}
   ETHEREUM_CQT_ADDRESS: ${{ secrets.ETHEREUM_CQT_ADDRESS }}
 
 jobs:
