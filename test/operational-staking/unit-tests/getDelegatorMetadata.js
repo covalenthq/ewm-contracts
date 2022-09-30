@@ -6,7 +6,7 @@ const {
   VALIDATOR_1,
   VALIDATOR_2,
   OPERATOR_1,
-  getDeployedContracts,
+  deployStaking,
   OPERATOR_2,
   DELEGATOR_1,
   DELEGATOR_2,
@@ -97,7 +97,7 @@ describe('Get delegator metadata', function() {
 
   it('Should return correct end epochs of unstakings', async function() {
     const [
-      _opManager,
+      owner,
       _contract,
       cqtContract,
       validator1,
@@ -105,13 +105,14 @@ describe('Get delegator metadata', function() {
       delegator1,
       delegator2,
     ] = await getAll();
-    const [opManager, contract] = await getDeployedContracts(
+    const contract = await deployStaking([
         CQT_ETH_MAINNET,
         10,
         20,
         5,
-        oneToken.mul(100000),
-    ); // cqt, delegatorCoolDown, validatorCoolDown, maxCapMultiplier, vMaxStakeCap)
+        oneToken.mul(100000)
+    ])
+    await contract.connect(owner).setStakingManagerAddress(owner.address)
 
     const required = oneToken.mul(10000);
     await contract.setMaxCapMultiplier(20);
@@ -119,7 +120,7 @@ describe('Get delegator metadata', function() {
     await addEnabledValidator(
         0,
         contract,
-        opManager,
+        owner,
         VALIDATOR_1,
         1000000000000,
     );
@@ -137,4 +138,22 @@ describe('Get delegator metadata', function() {
     md = await contract.getDelegatorMetadata(delegator1.address, 0);
     expect(md.unstakingsEndEpochs[0]).to.equal(r3.blockNumber + 10);
   });
+
+
+  it('Should revert when validator id is invalid', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await addEnabledValidator(0, contract, opManager, VALIDATOR_1, 100);
+    await expect(contract.getDelegatorMetadata(delegator1.address, 1)).to.revertedWith("Invalid validator");
+    await expect(contract.getDelegatorMetadata(delegator1.address, 10)).to.revertedWith("Invalid validator");
+  });
+
+
 });

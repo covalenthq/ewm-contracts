@@ -328,6 +328,96 @@ describe('Redelegate Unstaked', function() {
     ).to.revertedWith('Unstaking has less tokens');
   });
 
+  it('Should revert when redelegating from invalid validator', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    deposit(contract, oneToken.mul(1000));
+    await addEnabledValidator(
+        0,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        1000000000000,
+    );
+    const amount = oneToken.mul(1000);
+    await stake(amount, validator1, cqtContract, contract, 0);
+    await stake(oneToken.mul(1500), delegator1, cqtContract, contract, 0);
+    await mineBlocks(100);
+    await contract.disableValidator(0, 1);
+    await addEnabledValidator(
+        1,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        1000000000000,
+    );
+    const amountIn = oneToken.mul(1000);
+    await addEnabledValidator(
+        1,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        1000000000000,
+    );
+    await stake(amount, validator1, cqtContract, contract, 1);
+    await contract.connect(delegator1).unstake(0, amountIn);
+    await expect(
+        contract.connect(delegator1).redelegateUnstaked(amountIn.add(1), 10, 1, 0),
+    ).to.revertedWith('Invalid validator');
+  });
+
+  it('Should revert when redelegating invalid unstaking', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    deposit(contract, oneToken.mul(1000));
+    await addEnabledValidator(
+        0,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        1000000000000,
+    );
+    const amount = oneToken.mul(1000);
+    await stake(amount, validator1, cqtContract, contract, 0);
+    await stake(oneToken.mul(1500), delegator1, cqtContract, contract, 0);
+    await mineBlocks(100);
+    await contract.disableValidator(0, 1);
+    await addEnabledValidator(
+        1,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        1000000000000,
+    );
+    const amountIn = oneToken.mul(1000);
+    await addEnabledValidator(
+        1,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        1000000000000,
+    );
+    await stake(amount, validator1, cqtContract, contract, 1);
+    await contract.connect(delegator1).unstake(0, amountIn);
+    await expect(
+        contract.connect(delegator1).redelegateUnstaked(amountIn.add(1), 0, 1, 10),
+    ).to.revertedWith('Unstaking does not exist');
+  });
+
   it('Should not change contract balance', async function() {
     const [
       opManager,

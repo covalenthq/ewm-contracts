@@ -82,29 +82,24 @@ class RewardsCalculator {
     }
   }
 
+  redeemCommission(amount, id) {
+    id = id.toString();
+    amount = ethers.BigNumber.from(amount);
+    this.validators[id].availableRewardsCommission = this.validators[id].availableRewardsCommission.sub(amount);
+  }
+
+  redeemAllCommission(id) {
+    id = id.toString();
+    this.validators[id].availableRewardsCommission = zero()
+  }
+
   redeemRewards(amount, address, id) {
     id = id.toString();
     amount = ethers.BigNumber.from(amount);
-
-    if (this.isValidator(id, address)) {
-      let leftover = zero();
-      if (amount.lte(this.validators[id].availableRewardsCommission)) {
-        this.validators[id].availableRewardsCommission =
-          this.validators[id].availableRewardsCommission.sub(amount);
-      } else {
-        leftover = amount.sub(this.validators[id].availableRewardsCommission);
-        this.validators[id].availableRewardsCommission = zero();
-        this.delegations[id][address].availableRewards =
-          this.delegations[id][address].availableRewards.sub(leftover);
-        this.validators[id].totalStaked =
-          this.validators[id].totalStaked.sub(leftover);
-      }
-    } else {
-      this.delegations[id][address].availableRewards =
-        this.delegations[id][address].availableRewards.sub(amount);
-      this.validators[id].totalStaked =
-        this.validators[id].totalStaked.sub(amount);
-    }
+    this.delegations[id][address].availableRewards =
+    this.delegations[id][address].availableRewards.sub(amount);
+    this.validators[id].totalStaked =
+    this.validators[id].totalStaked.sub(amount);
   }
 
   unstake(amount, address, id) {

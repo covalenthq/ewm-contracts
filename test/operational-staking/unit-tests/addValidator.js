@@ -100,4 +100,40 @@ describe('Add Validator', function() {
     details = await contract.getValidatorMetadata(2);
     expect(details._address).to.equal(DELEGATOR_2);
   });
+
+  it('Should revert when validator address is 0.', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await expect(contract.connect(opManager).addValidator("0x0000000000000000000000000000000000000000", 1)).to.be.revertedWith(
+        'Validator address is 0',
+    );
+
+  });
+
+  it('Should revert when commission rate is 100%', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await expect(contract.connect(opManager).addValidator(VALIDATOR_1, oneToken)).to.be.revertedWith(
+        'Rate must be less than 100%',
+    );
+
+    await expect(contract.connect(opManager).addValidator(VALIDATOR_1, oneToken.add(1))).to.be.revertedWith(
+      'Rate must be less than 100%',
+  );
+
+  });
 });

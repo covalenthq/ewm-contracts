@@ -506,4 +506,49 @@ describe('Transfer Unstaked', function() {
         contract.connect(validator1).transferUnstakedOut(amountIn, 0, 0),
     ).to.revertedWith('Cooldown period has not ended');
   });
+
+
+  it('Should revert when given invalid validator id', async function() {
+    const delegatorCoolDown = 100;
+    const validatorCoolDown = 5000;
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAllWithCoolDown(
+        CQT_ETH_MAINNET,
+        delegatorCoolDown,
+        validatorCoolDown,
+        10,
+        oneToken.mul(100000),
+    );
+    deposit(contract, oneToken.mul(100000));
+    await addEnabledValidator(
+        0,
+        contract,
+        opManager,
+        VALIDATOR_1,
+        1000000000000,
+    );
+    const amount = oneToken.mul(1000);
+    await stake(amount, validator1, cqtContract, contract, 0);
+    await stake(oneToken.mul(8000), validator1, cqtContract, contract, 0);
+    await mineBlocks(100);
+    let amountIn = oneToken.mul(7000);
+    await contract.connect(validator1).unstake(0, amountIn);
+    await mineBlocks(100);
+    await expect(
+        contract.connect(validator1).transferUnstakedOut(amountIn, 100, 0),
+    ).to.revertedWith('Invalid validator');
+    amountIn = oneToken.mul(1000);
+    await contract.connect(validator1).unstake(0, amountIn);
+    await mineBlocks(100);
+    await expect(
+        contract.connect(validator1).transferUnstakedOut(amountIn, 10, 0),
+    ).to.revertedWith('Invalid validator');
+  });
 });

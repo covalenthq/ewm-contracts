@@ -55,4 +55,20 @@ describe('Set validator max stake', function() {
         .to.emit(contract, 'ValidatorMaxCapChanged')
         .withArgs(oneToken);
   });
+
+  it('Should revert when max stake is set to 0.', async function() {
+    const [
+      opManager,
+      contract,
+      cqtContract,
+      validator1,
+      validator2,
+      delegator1,
+      delegator2,
+    ] = await getAll();
+    await expect(contract.setValidatorMaxStake(0)).to.be.revertedWith(
+        'Provided max stake is 0',
+    );
+
+  });
 });

@@ -17,22 +17,15 @@
 - To start a node: `npx hardhat node`
 - To compile: `npx hardhat compile`
 - To run all tests: `npx hardhat test`
-- to run a specific test: `npx hardhat test path/to/test`
+- To run a specific test: `npx hardhat test path/to/test`
+- To export abi: `npx hardhat export-abi`
 
 ### Testing
 
-You need to have access to an archive node. Place the node url into hardhat.config.js:
-
+You need to have access to an archive node.Setup environment variables. Create .envrc file and add the following:
 ```
-...
-networks: {
-    hardhat: {
-      chainId: 1,
-      forking: {
-        url: "http://you.rpc.url.here",
-        blockNumber: 13182263
-      }
-...
+export ETHEREUM_NODE="http://your.rpc.url.here"
+export ETHEREUM_CQT_ADDRESS="0xD417144312DbF50465b1C641d016962017Ef6240"
 ```
 
 #### Run
@@ -43,11 +36,15 @@ networks: {
 
 `npx hardhat test ./test/proof-chain/unit-tests/*`
 
+`npx hardhat coverage --testfiles "./test/operational-staking/unit-tests/*`
+
+`npx hardhat coverage --testfiles "./test/proof-chain/unit-tests/*`
+
 
 # Summary
-This repo contains two contracts: ProofChain and Staking which are part of the Covalent Network. They were designed with the purpose to enable the Covalent Staking program. 
+This repo contains two contracts: ProofChain and Staking which are part of the Covalent Network. They were designed with the purpose to enable the Covalent Staking program.
 
-Operators stake their tokens, do work by running nodes, submit a proof of work to the ProofChain and receive rewards in CQT tokens. If enough operators get the same result of work, then quorum is achieved, the rewards are emitted and pushed from the ProofChain to the Staking. Additionally, delegators (these who do not run nodes) can delegate their tokens under the operators and receive rewards. The delegators will have to pay commission fees to the operators. 
+Operators stake their tokens, do work by running nodes, submit a proof of work to the ProofChain and receive rewards in CQT tokens. If enough operators get the same result of work, then quorum is achieved, the rewards are emitted and pushed from the ProofChain to the Staking. Additionally, delegators (these who do not run nodes) can delegate their tokens under the operators and receive rewards. The delegators will have to pay commission fees to the operators.
 
 For the detailed explanation of what is Covalent Network and what kind of work the operators do please refer to the [white paper](https://www.covalenthq.com/static/documents/Block%20Specimen%20Whitepaper%20V1.2.pdf).
 
@@ -76,6 +73,11 @@ Delegators pay commission fees from their earned reward based on the commission 
   An example of max cap: </br>
   Assuming validator_max_cap_multiplier is set to `10`, then a validator comes and stakes 1 million tokens. The max cap of the validator is `10 * 1 million = 10 million`. So delegator `A` comes and delegates `3 million`, delegator `B` - `2 million`, and delegator `C` - `5 million`. In other words, the total number of tokens delegated already equals the maximum cap of `10 million`. Thus, a new delegator 'D' cannot delegate tokens to the validator unless someone unstakes their tokens.
 - A validator cannot unstake tokens that would reduce the maximum cap below what is already delegated. If a validator is willing to do so, the validator will have to disable itself through the StakingManager. The delegators will stop earning the rewards from that validator, but they will have an option to redelegate tokens to another validator without a cool down period. The validator can enable its instance back through the StakingManager.
+- It is allowed for the same validator address to have multiple ids.
+- When changing its address a validator cannot transfer unstakings if there are more than 300 of them. This is to ensure the contract does not revert from too much gas used. In case if there are more than 300 unstakings, there is an option to transfer the address without unstakings.
+
+### Additional constainsts:
+- Due to potential conversion overflow and precision loss there is a constaint that requires the staked and rewards amounts to be greater than REWARD_REDEEM_THRESHOLD. Currently it is set to 0.0000000001 CQT. Hence, if not the full amount is unstaked or redeem there is a potential lock of the remaining 0.0000000001.
 
 ### Redeeming Rewards:
 
@@ -93,6 +95,9 @@ An unstaked amount can always be recovered: The unstaked amount (partially or in
 - Set the validator max cap multiplier
 - Set the maximum number of tokens the validator can stake
 - Set the StakingManager address
+- Renounce his role and disable all the following listed actions by calling renounceOwnership
+- Transfer the ownership to another address by calling transferOwnership
+- Set or change the stakingManager by calling setStakingManagerAddress
 
 ### What the StakingManager can do:
 
@@ -108,6 +113,7 @@ An unstaked amount can always be recovered: The unstaked amount (partially or in
 - Unstake
 - Transfer out unlocked unstake
 - Restake back unstake
+- Change validators' address
 
 _Note: Validators cannot set their commission rate, and if they wish to change it, they must contact Covalent. Commission rates are initially set when the StakingManager adds a validator for the first time._
 
@@ -180,22 +186,22 @@ There is a slight precision loss in rewards calculation. It is acceptable as lon
 
 ### The goal:
 
-Allow operators to submit proofs of work. 
+Allow operators to submit proofs of work.
 
-There are five types of entities: Owner, Block Specimen Producer (BSP), Block Specimen Producer Manager, Auditor and Governor. The Block Specimen Producer is an operator who runs a covalent node and submits proofs of work to the ProofChain. The Block Specimen Producer Manager is an account the operator uses to enable/disable its operator instances. An Auditor is an operator who arbitrates sessions that did not reach quorum. A Governor is an entity who can add or remove operators and set additional storage variables. 
+There are five types of entities: Owner, Block Specimen Producer (BSP), Block Specimen Producer Manager, Auditor and Governor. The Block Specimen Producer is an operator who runs a covalent node and submits proofs of work to the ProofChain. The Block Specimen Producer Manager is an account the operator uses to enable/disable its operator instances. An Auditor is an operator who arbitrates sessions that did not reach quorum. A Governor is an entity who can add or remove operators and set additional storage variables.
 
-Currently, only Operators approved by Covalent can perform the BSP role and Covalent performs the auditor and governor roles. 
+Currently, only Operators approved by Covalent can perform the BSP role and Covalent performs the auditor and governor roles.
 
 ### The flow:
-1. A network operator gets added on the ProofChain and Staking contracts by Covalent. 
-2. The operator stakes CQT on the Staking contract using its staking wallet. 
-3. The operator enables its instance on the ProofChain. 
+1. A network operator gets added on the ProofChain and Staking contracts by Covalent.
+2. The operator stakes CQT on the Staking contract using its staking wallet.
+3. The operator enables its instance on the ProofChain.
 4. The delegators delegate their CQT tokens under the operator instance.
-6. The operator produces a Block Specimen and submits proofs of work in the form of Block Specimen Hashes to the ProofChain. This starts a new session for that corresponding block. 
-7. Other operators submit the proofs for the same session as well. 
-8. Once the session deadline has reached, a separate agent invokes a finalize transaction. Here it gets determined if the quorum was reached or not. Achieving the quorum means a majority submitted the same Block Specimen Hash. 
+6. The operator produces a Block Specimen and submits proofs of work in the form of Block Specimen Hashes to the ProofChain. This starts a new session for that corresponding block.
+7. Other operators submit the proofs for the same session as well.
+8. Once the session deadline has reached, a separate agent invokes a finalize transaction. Here it gets determined if the quorum was reached or not. Achieving the quorum means a majority submitted the same Block Specimen Hash.
 9. If quorum is achieved the participants who submitted the agreed specimen hashes get rewarded. The rewards are pushed from the ProofChain to the Staking. If quorum was not achieved nothing happens. In both cases at the end of the transaction, the session gets marked as `requires audit`.
-10. Sometimes the nodes may end up submitting hashes for reorg blocks and Covalent wants to reward these too. The auditor will be arbitrating these submissions. 
+10. Sometimes the nodes may end up submitting hashes for reorg blocks and Covalent wants to reward these too. The auditor will be arbitrating these submissions.
 
 
 ## Role Management
@@ -215,7 +221,7 @@ A session starts when an operator submits the first proof per `chain id` per `bl
 - **reward per block hash** - is distributed per block hash rather than per session
 - **min submissions** - to achieve quorum, there should be at least a minimum number of submissions of the agreed hash
 
-### Session submission parameters 
+### Session submission parameters
 - chain id
 - block height
 - block hash
@@ -288,12 +294,12 @@ Block Hash B
 
 ##### Optimistic phase
 
-~55% (5 out 9) participants submitted specimen hash A'. The quorum is achieved. The submitters of the specimen hash A' receive the reward. These who submitted A'' do not receive anything. 
+~55% (5 out 9) participants submitted specimen hash A'. The quorum is achieved. The submitters of the specimen hash A' receive the reward. These who submitted A'' do not receive anything.
 
 
 ##### Pessimistic phase
 
-The auditor arbitrates the session for block hash B and decides that the specimen hash B'' is correct. The submitters of the specimen hash B'' receive the reward and these who submitted B' do not receive anything. 
+The auditor arbitrates the session for block hash B and decides that the specimen hash B'' is correct. The submitters of the specimen hash B'' receive the reward and these who submitted B' do not receive anything.
 
 
 #### Case 4 - Quorum not achieved, Pessimistic Phase happens
@@ -328,7 +334,7 @@ The auditor arbitrates the session for all the submitted block hashes: A, B, C a
 ## Functionalities
 
 ##### What Block Specimen Producer Operator can do
-- submit proofs 
+- submit proofs
 
 ##### What Block Specimen Producer Operator Manager can do
 - enable/disable its operator instances
@@ -342,8 +348,8 @@ The auditor arbitrates the session for all the submitted block hashes: A, B, C a
 - set staking contract address
 - set quorum threshold
 - set block divisor (nth block)
-- set reward allocated 
-- set session duration 
+- set reward allocated
+- set session duration
 - set chain sync data
 - set max submissions per block height
 - set min submissinos required
