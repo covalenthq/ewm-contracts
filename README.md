@@ -85,7 +85,7 @@ Delegators and validators can decide whether to withdraw all of their rewards or
 
 ### Unstaking:
 
-Validators who self-delegate will have to wait 180 days for their unstaking to be unlocked, while delegators have to wait 28 days. Once unstaking is unlocked, tokens can be transferred back into the delegator's or validator's wallet.
+Validators who self-delegate will have to wait 1,234,260 blocks (~180 days at the time of contract deployment, 6857 blocks per day * 180) for their unstaking to be unlocked, while delegators have to wait 191,996 blocks (~28 days at the time of contract deployment, 6857 blocks per day * 28). Once unstaking is unlocked, tokens can be transferred back into the delegator's or validator's wallet.
 An unstaked amount can always be recovered: The unstaked amount (partially or in full) can be delegated back to the same validator.
 
 ### What the owner can do:
