@@ -63,6 +63,13 @@ const TOKEN_HOLDERS_ADDRESSES = [
   '0xa1d8d972560c2f8144af871db508f0b0b10a3fbf',
 ];
 
+const getSigner = async (address) => {
+  await impersonate(address);
+  const signer = await ethers.getSigner(address)
+  await giveEth('1.0', [signer])
+  return signer
+};
+
 const impersonate = async (address) =>
   await hre.network.provider.request({
     method: 'hardhat_impersonateAccount',
@@ -171,6 +178,11 @@ const deposit = async (contract, amount) => {
   await cqtContract.approve(contract.address, amount);
   await contract.depositRewardTokens(amount);
 };
+
+const giveCQT = async (amount, recipientAddress, cqtContract) => {
+    const tokenHolder = await getSigner(TOKEN_HOLDERS_ADDRESSES[0])
+    await cqtContract.connect(tokenHolder).transfer(recipientAddress, amount)
+}
 
 const stake = async (amount, signer, cqtContract, contract, id) => {
   await cqtContract.connect(signer).approve(contract.address, amount);
@@ -299,10 +311,61 @@ const setupDefaultOperators = async () => {
 
 const getHash = (str) => '0x' + createKeccakHash('keccak256').update(str).digest('hex');
 
+async function getProofChainContract(signer, address) {
+  return new ethers.Contract(address, PROOFCHAIN_ABI, signer);
+}
+
+async function getStakingContract(signer, address) {
+  return new ethers.Contract(address, STAKING_ABI, signer);
+}
+
+async function getCQTContract(signer, address) {
+  return new ethers.Contract(address, CQT_ABI, signer);
+}
+
+async function getCQTFaucetContract(deployer) {
+  const NAME = 'CovalentQueryTokenFaucet';
+  const SYMBOL = 'CQT';
+  const MAX_SUPPLY = BigInt(1000000000000000000000000000);
+
+  console.log('Deploying CQT Faucet with the account:', deployer.address);
+
+  const CQTFaucet = await hre.ethers.getContractFactory('CovalentQueryTokenFaucet', deployer);
+  const cqtFaucet = await CQTFaucet.deploy(NAME, SYMBOL, MAX_SUPPLY);
+  await cqtFaucet.deployed();
+  return cqtFaucet;
+}
+
 async function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+const zero = () => ethers.BigNumber.from(0);
+
+async function getDelegatorBalances(stakingContract, delegatorAddress) {
+
+  const validatorN = (await stakingContract.getMetadata())._validatorsN;
+  let sum = zero();
+  let unstaked = zero();
+  let rewards = zero();
+  let staked = zero();
+  for (var i = 0; i < validatorN; i++) {
+    const delegatorData = await stakingContract.getDelegatorMetadata(delegatorAddress, i);
+    for (var k = 0; k < delegatorData.unstakingAmounts.length; k++) {
+      sum = sum.add(delegatorData.unstakingAmounts[k]);
+      unstaked = unstakedRedeemable.add(delegatorData.unstakingAmounts[k]);
+    }
+    sum = sum.add(delegatorData.staked);
+    sum = sum.add(delegatorData.rewards);
+    sum = sum.add(delegatorData.commissionEarned);
+    staked = staked.add(delegatorData.staked)
+    rewards = rewards.add(delegatorData.rewards);
+  }
+  let row = [sum, rewards, unstaked];
+  row = row.map(val => val.div(oneToken).toString());
+  row = [delegatorAddress].concat(row);
+  return {sum: sum, staked:staked, rewards:rewards, unstaked: unstaked}
 }
 
 
@@ -323,6 +386,7 @@ exports.getDelegatorCoolDown = getDelegatorCoolDown;
 exports.deployStakingWithDefaultParams = deployStakingWithDefaultParams;
 exports.deployStaking = deployStaking;
 exports.impersonateAll = impersonateAll;
+exports.impersonate = impersonate;
 exports.addEnabledValidator = addEnabledValidator;
 exports.getAllWithProofchain = getAllWithProofchain;
 exports.setupWithDefaultParameters = setupWithDefaultParameters;
@@ -330,7 +394,14 @@ exports.setupDefaultOperators = setupDefaultOperators;
 exports.getCqtContract = getCqtContract;
 exports.giveEth = giveEth;
 exports.getHash = getHash;
+exports.getProofChainContract = getProofChainContract;
+exports.getStakingContract = getStakingContract;
 exports.sleep = sleep;
+exports.getCQTFaucetContract = getCQTFaucetContract;
+exports.getSigner = getSigner;
+exports.giveCQT = giveCQT;
+exports.zero = zero;
+exports.getDelegatorBalances = getDelegatorBalances;
 
 exports.oneToken = oneToken;
 exports.OWNER = OWNER;
