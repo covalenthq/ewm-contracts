@@ -1,4 +1,5 @@
 const { ethers } = require('hardhat');
+const { defender } = require("hardhat");
 
 const proofChainAddress = process.env.PROOFCHAIN_ADDRESS
 
