@@ -158,8 +158,6 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
      * Withdraw all the CQT from the contract to the given wallet
      */
     function withdrawAllMadCQT(address recoveryWallet) external onlyOwner {
-        // need to keep track of the pool amount "burnt" too
-        emit MadCQTBurnt(rewardPool);
         uint256 balance = CQT.balanceOf(address(this));
         CQT.safeTransfer(recoveryWallet, balance);
     }
