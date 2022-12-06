@@ -112,7 +112,9 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
             0xa312F7156A2F4290D53e5694afE44e9cC7f1B811
         ];
 
-        for (uint128 i = 0; i < defaultToBurn.length; i++) {
+        uint256 burnLength = defaultToBurn.length;
+
+        for (uint128 i = 0; i < burnLength; i++) {
             for (uint128 validatorId = 0; validatorId < validatorsN; validatorId++) {
                 _burnDelegatorBalance(validatorId, defaultToBurn[i]);
             }
