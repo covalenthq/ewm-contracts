@@ -406,6 +406,41 @@ describe('Initialize contract', function () {
 
     });
 
+    it('Should revert when the given CQT address is zero', async function () {
+        const [
+            opManager,
+            originalContrtact,
+            cqtContract,
+            validator1,
+            validator2,
+            delegator1,
+            delegator2,
+        ] = await getAll();
+        const owner = await getOwner();
+        const contract = await upgradeToMigrationStaking(originalContrtact, owner);
+        await expect(
+            contract.connect(opManager).setCQTAddress('0x0000000000000000000000000000000000000000'),
+        ).to.be.revertedWith("Invalid CQT address");
+    });
+
+    it('Should revert when the given CQT address is zero', async function () {
+        const [
+            opManager,
+            originalContrtact,
+            cqtContract,
+            validator1,
+            validator2,
+            delegator1,
+            delegator2,
+        ] = await getAll();
+        const owner = await getOwner();
+        const contract = await upgradeToMigrationStaking(originalContrtact, owner);
+        await expect(
+            contract.connect(opManager).withdrawAllMadCQT('0x0000000000000000000000000000000000000000'),
+        ).to.be.revertedWith("Invalid recovery wallet address");
+    });
+
+
     it('Should not burn self staked tokens.', async function () {
         const [
             opManager,

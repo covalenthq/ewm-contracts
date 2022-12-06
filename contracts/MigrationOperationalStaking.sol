@@ -162,6 +162,7 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
      * Withdraw all the CQT from the contract to the given wallet
      */
     function withdrawAllMadCQT(address recoveryWallet) external onlyOwner {
+        require(recoveryWallet != address(0), "Invalid recovery wallet address");
         uint256 balance = CQT.balanceOf(address(this));
         CQT.safeTransfer(recoveryWallet, balance);
     }
@@ -170,6 +171,7 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
      * Set CQT token address
      */
     function setCQTAddress(address newCQT) external onlyOwner {
+        require(newCQT != address(0), "Invalid CQT address");
         CQT = IERC20Upgradeable(newCQT);
         emit CQTAddressChanged(newCQT);
     }
