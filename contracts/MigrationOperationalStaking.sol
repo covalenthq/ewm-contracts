@@ -88,6 +88,11 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
 
     event CQTAddressChanged(address indexed cqt);
 
+    modifier validValidatorId(uint128 validatorId) {
+        require(validatorId < validatorsN, "Invalid validator");
+        _;
+    }
+
     /*
      * Used to convert validator shares to CQT
      */
@@ -124,8 +129,7 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
     /*
      * Burn delegator's stakes, rewards and unstakes under the given validator
      */
-    function _burnDelegatorBalance(uint128 validatorId, address delegator) internal {
-        require(validatorId < validatorsN, "Invalid validator");
+    function _burnDelegatorBalance(uint128 validatorId, address delegator) internal validValidatorId(validatorId) {
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[delegator];
 
@@ -193,8 +197,7 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
     /*
      * Returns validator staked and delegated token amounts, excluding compounded rewards
      */
-    function getValidatorStakingData(uint128 validatorId) external view returns (uint128 staked, uint128 delegated) {
-        require(validatorId < validatorsN, "Invalid validator");
+    function getValidatorStakingData(uint128 validatorId) external view validValidatorId(validatorId) returns (uint128 staked, uint128 delegated) {
         Validator storage v = _validators[validatorId];
         return (v.stakings[v._address].staked, v.delegated);
     }
@@ -218,6 +221,7 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
     function getDelegatorMetadata(address delegator, uint128 validatorId)
         external
         view
+        validValidatorId(validatorId)
         returns (
             uint128 staked,
             uint128 rewards,
@@ -226,7 +230,6 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
             uint128[] memory unstakingsEndEpochs
         )
     {
-        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[delegator];
         staked = s.staked;

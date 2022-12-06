@@ -87,6 +87,11 @@ contract OperationalStaking is OwnableUpgradeable {
         _;
     }
 
+    modifier validValidatorId(uint128 validatorId) {
+        require(validatorId < validatorsN, "Invalid validator");
+        _;
+    }
+
     function initialize(
         address cqt,
         uint128 dCoolDown,
@@ -211,8 +216,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Disables validator instance starting from the given block
      */
-    function disableValidator(uint128 validatorId, uint256 blockNumber) external onlyStakingManager {
-        require(validatorId < validatorsN, "Invalid validator");
+    function disableValidator(uint128 validatorId, uint256 blockNumber) external onlyStakingManager validValidatorId(validatorId) {
         require(blockNumber > 0, "Disable block cannot be 0");
         _validators[validatorId].disabledAtBlock = blockNumber;
         emit ValidatorDisabled(validatorId, blockNumber);
@@ -221,8 +225,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Enables validator instance by setting the disabledAtBlock to 0
      */
-    function enableValidator(uint128 validatorId) external onlyStakingManager {
-        require(validatorId < validatorsN, "Invalid validator");
+    function enableValidator(uint128 validatorId) external onlyStakingManager validValidatorId(validatorId) {
         _validators[validatorId].disabledAtBlock = 0;
         emit ValidatorEnabled(validatorId);
     }
@@ -231,8 +234,7 @@ contract OperationalStaking is OwnableUpgradeable {
      * Updates validator comission rate
      * Commission rate is a number between 0 and 10^18 (0%-100%)
      */
-    function setValidatorCommissionRate(uint128 validatorId, uint128 amount) external onlyOwner {
-        require(validatorId < validatorsN, "Invalid validator");
+    function setValidatorCommissionRate(uint128 validatorId, uint128 amount) external onlyOwner validValidatorId(validatorId) {
         require(amount < DIVIDER, "Rate must be less than 100%");
         _validators[validatorId].commissionRate = amount;
         emit ValidatorCommissionRateChanged(validatorId, amount);
@@ -281,8 +283,7 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 validatorId,
         uint128 amount,
         bool withTransfer
-    ) internal {
-        require(validatorId < validatorsN, "Invalid validator");
+    ) internal validValidatorId(validatorId) {
         require(amount >= REWARD_REDEEM_THRESHOLD, "Stake amount is too small");
         Validator storage v = _validators[validatorId];
         bool isValidator = msg.sender == v._address;
@@ -319,8 +320,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Undelegates tokens from the provided validator
      */
-    function unstake(uint128 validatorId, uint128 amount) external {
-        require(validatorId < validatorsN, "Invalid validator");
+    function unstake(uint128 validatorId, uint128 amount) external validValidatorId(validatorId) {
         require(amount >= REWARD_REDEEM_THRESHOLD, "Unstake amount is too small");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[msg.sender];
@@ -368,8 +368,7 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 amount,
         uint128 validatorId,
         uint128 unstakingId
-    ) external {
-        require(validatorId < validatorsN, "Invalid validator");
+    ) external validValidatorId(validatorId) {
         require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(us.amount >= amount, "Unstaking has less tokens");
@@ -389,8 +388,7 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 amount,
         uint128 validatorId,
         uint128 unstakingId
-    ) external {
-        require(validatorId < validatorsN, "Invalid validator");
+    ) external validValidatorId(validatorId) {
         require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(uint128(block.number) > us.coolDownEnd, "Cooldown period has not ended");
@@ -427,8 +425,7 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 validatorId,
         address beneficiary,
         uint128 amount
-    ) internal {
-        require(validatorId < validatorsN, "Invalid validator");
+    ) internal validValidatorId(validatorId) {
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[msg.sender];
@@ -468,8 +465,7 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 validatorId,
         address beneficiary,
         uint128 amount
-    ) public {
-        require(validatorId < validatorsN, "Invalid validator");
+    ) public validValidatorId(validatorId) {
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         require(v._address == msg.sender, "The sender is not the validator");
@@ -498,8 +494,7 @@ contract OperationalStaking is OwnableUpgradeable {
         uint128 oldValidatorId,
         uint128 newValidatorId,
         uint128 unstakingId
-    ) external {
-        require(oldValidatorId < validatorsN, "Invalid validator");
+    ) external validValidatorId(oldValidatorId) validValidatorId(newValidatorId) {
         Validator storage v = _validators[oldValidatorId];
         require(v.disabledAtBlock != 0, "Validator is not disabled");
         require(v._address != msg.sender, "Validator cannot redelegate");
@@ -568,6 +563,7 @@ contract OperationalStaking is OwnableUpgradeable {
     function getValidatorMetadata(uint128 validatorId)
         public
         view
+        validValidatorId(validatorId)
         returns (
             address _address,
             uint128 staked,
@@ -576,7 +572,6 @@ contract OperationalStaking is OwnableUpgradeable {
             uint256 disabledAtBlock
         )
     {
-        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         return (v._address, v.stakings[v._address].staked, v.delegated, v.commissionRate, v.disabledAtBlock);
     }
@@ -633,8 +628,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Returns validator staked and delegated token amounts, excluding compounded rewards
      */
-    function getValidatorStakingData(uint128 validatorId) external view returns (uint128 staked, uint128 delegated) {
-        require(validatorId < validatorsN, "Invalid validator");
+    function getValidatorStakingData(uint128 validatorId) external view validValidatorId(validatorId) returns (uint128 staked, uint128 delegated) {
         Validator storage v = _validators[validatorId];
         return (v.stakings[v._address].staked, v.delegated);
     }
@@ -658,6 +652,7 @@ contract OperationalStaking is OwnableUpgradeable {
     function getDelegatorMetadata(address delegator, uint128 validatorId)
         external
         view
+        validValidatorId(validatorId)
         returns (
             uint128 staked,
             uint128 rewards,
@@ -666,7 +661,6 @@ contract OperationalStaking is OwnableUpgradeable {
             uint128[] memory unstakingsEndEpochs
         )
     {
-        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[delegator];
         staked = s.staked;
