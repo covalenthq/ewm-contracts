@@ -104,12 +104,13 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
      * Burn stakes, rewards and unstakes of a predefined list of delegators
      */
     function burnDefaultDelegators() external onlyOwner {
-        address[5] memory defaultToBurn = [
+        address[6] memory defaultToBurn = [
             0xe7CCfcc5815131B129c82322B4bA9E10B0159291,
             0x122F83aE6B1677082F2541686b74Ca55Ebb1B58b,
             0xdB6ee35DdbA6AB1F39d4a1369104A543e5De0E11,
             0x128E6bBAa2d269A7D26a3E3AF13Ea86943A05C24,
-            0xa312F7156A2F4290D53e5694afE44e9cC7f1B811
+            0xa312F7156A2F4290D53e5694afE44e9cC7f1B811,
+            0x1DB596c09f5B37013B3cc263B9903D2474050F3f
         ];
 
         uint256 burnLength = defaultToBurn.length;
