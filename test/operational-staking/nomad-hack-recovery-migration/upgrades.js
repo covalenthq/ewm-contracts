@@ -106,6 +106,38 @@ describe('Initialize contract', function () {
     }
     );
 
+    it('Should emit MadCQTWithdrawn CQT address in between', async function () {
+        const owner = await getOwner();
+        const [
+            opManager,
+            contract,
+            cqtContract,
+            validator1,
+            validator2,
+            delegator1,
+            delegator2,
+        ] = await getAll();
+        await deposit(contract, oneToken.mul(1000));
+        await contract.connect(opManager).addValidator(VALIDATOR_1, 1000000000000);
+        await stake(oneToken.mul(10000), validator1, cqtContract, contract, 0);
+        await expect((await contract.getMetadata()).CQTaddress).to.equal(CQT_ETH_MAINNET);
+
+        const migrationStaking = await upgradeToMigrationStaking(contract, owner);
+        let res = await migrationStaking.withdrawAllMadCQT(owner.address);
+
+        expect(res)
+            .to.emit(contract, 'MadCQTWithdrawn')
+            .withArgs(CQT_ETH_MAINNET, (oneToken.mul(1000)).add(oneToken.mul(10000)));
+
+        let res2 = await migrationStaking.withdrawAllMadCQT(owner.address);
+
+        expect(res2)
+            .to.emit(contract, 'MadCQTWithdrawn')
+            .withArgs(CQT_ETH_MAINNET, 0);
+    });
+
+
+
     it('Should change CQT address in between', async function () {
         const owner = await getOwner();
         const [
@@ -126,6 +158,7 @@ describe('Initialize contract', function () {
 
         const newCQTFaucet = await getCQTFaucetContract(owner);
         const newCQT = newCQTFaucet.address;
+        await migrationStaking.withdrawAllMadCQT(owner.address);
         await migrationStaking.setCQTAddress(newCQT);
         await expect((await migrationStaking.getMetadata()).CQTaddress).to.equal(newCQT);
 
@@ -370,9 +403,6 @@ describe('Initialize contract', function () {
     }
     );
 
-
-
-
     it('Should not access withdrawMadCQT, burnDefaultBalances, setCQTAddress, renounceOwnership by not owner.', async function () {
         const [
             opManager,
@@ -423,6 +453,25 @@ describe('Initialize contract', function () {
         ).to.be.revertedWith("Invalid CQT address");
     });
 
+    it('Should revert when attempt to set CQT address with balance > 0', async function () {
+        const [
+            opManager,
+            originalContrtact,
+            cqtContract,
+            validator1,
+            validator2,
+            delegator1,
+            delegator2,
+        ] = await getAll();
+        const owner = await getOwner();
+        const deposited = oneToken.mul(10000);
+        await deposit(originalContrtact, deposited);
+        const contract = await upgradeToMigrationStaking(originalContrtact, owner);
+        await expect(
+            contract.connect(opManager).setCQTAddress(owner.address),
+        ).to.be.revertedWith("Cannot change CQT address when balance is > 0");
+    });
+
     it('Should revert when the given CQT address is zero', async function () {
         const [
             opManager,
@@ -438,6 +487,24 @@ describe('Initialize contract', function () {
         await expect(
             contract.connect(opManager).withdrawAllMadCQT('0x0000000000000000000000000000000000000000'),
         ).to.be.revertedWith("Invalid recovery wallet address");
+    });
+
+    it('Should revert when the given CQT address is the same as before', async function () {
+        const [
+            opManager,
+            originalContrtact,
+            cqtContract,
+            validator1,
+            validator2,
+            delegator1,
+            delegator2,
+        ] = await getAll();
+        const owner = await getOwner();
+        const contract = await upgradeToMigrationStaking(originalContrtact, owner);
+        const addr = (await contract.getMetadata()).CQTaddress;
+        await expect(
+            contract.connect(opManager).setCQTAddress(addr),
+        ).to.be.revertedWith("New CQT address cannot be equal to the old one");
     });
 
 

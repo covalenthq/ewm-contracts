@@ -88,6 +88,8 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
 
     event CQTAddressChanged(address indexed cqt);
 
+    event MadCQTWithdrawn(address indexed cqt, uint256 indexed amount);
+
     modifier validValidatorId(uint128 validatorId) {
         require(validatorId < validatorsN, "Invalid validator");
         _;
@@ -168,6 +170,7 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
         require(recoveryWallet != address(0), "Invalid recovery wallet address");
         uint256 balance = CQT.balanceOf(address(this));
         CQT.safeTransfer(recoveryWallet, balance);
+        emit MadCQTWithdrawn(address(CQT), balance);
     }
 
     /*
@@ -175,6 +178,8 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
      */
     function setCQTAddress(address newCQT) external onlyOwner {
         require(newCQT != address(0), "Invalid CQT address");
+        require(newCQT != address(CQT), "New CQT address cannot be equal to the old one");
+        require(CQT.balanceOf(address(this)) == 0, "Cannot change CQT address when balance is > 0");
         CQT = IERC20Upgradeable(newCQT);
         emit CQTAddressChanged(newCQT);
     }
