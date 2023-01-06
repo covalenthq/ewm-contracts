@@ -33,7 +33,8 @@ const defaultAccountsToBurn = [
     "0x122F83aE6B1677082F2541686b74Ca55Ebb1B58b",
     "0xdB6ee35DdbA6AB1F39d4a1369104A543e5De0E11",
     "0x128E6bBAa2d269A7D26a3E3AF13Ea86943A05C24",
-    "0xa312F7156A2F4290D53e5694afE44e9cC7f1B811"
+    "0xa312F7156A2F4290D53e5694afE44e9cC7f1B811",
+    "0x1DB596c09f5B37013B3cc263B9903D2474050F3f"
 ];
 
 const upgradeToMigrationStaking = async (contract, owner) => {
@@ -77,6 +78,20 @@ const stakeToValidators = async (ids, amounts, staking, delegator, cqtContract) 
     }
 };
 
+async function getMadCQTBurntAmount(txResult) {
+    const receipt = await txResult.wait();
+    const events = receipt.events.filter((x) => {
+        return x.event == "MadCQTBurnt";
+    });
+
+    let sum = 0;
+    for (let index = 0; index < events.length; index++) {
+        const event = events[index];
+        const amount = event.args.amount;
+        sum = amount.add(sum);
+    }
+    return sum;
+}
 
 describe('Initialize contract', function () {
     it('Should upgrade to migration contract and back to original', async function () {
@@ -182,78 +197,181 @@ describe('Initialize contract', function () {
         const deposited = oneToken.mul(1000);
         await deposit(contract, deposited);
 
+        let delegators = [];
+        for (let index = 0; index < defaultAccountsToBurn.length; index++) {
+            const d = await getSigner(defaultAccountsToBurn[index]);
+            delegators.push(d);
+
+        }
+
         await addValidatorAndSelfStake(contract, cqtContract, opManager, validator1, 0);
         await addValidatorAndSelfStake(contract, cqtContract, opManager, validator2, 1);
         await addValidatorAndSelfStake(contract, cqtContract, opManager, delegator1, 2);
         await addValidatorAndSelfStake(contract, cqtContract, opManager, delegator2, 3);
-        const selfStaked = oneToken.mul(10000).mul(5);
+        const selfStakedPerValidator = oneToken.mul(10000);
+        const selfStakedTotal = oneToken.mul(10000).mul(5);
 
         await expect((await contract.getMetadata()).CQTaddress).to.equal(CQT_ETH_MAINNET);
 
-        const d1 = await getSigner(defaultAccountsToBurn[0]);
-        const d2 = await getSigner(defaultAccountsToBurn[1]);
-        const d3 = await getSigner(defaultAccountsToBurn[2]);
-        const d4 = await getSigner(defaultAccountsToBurn[3]);
-        const d5 = await getSigner(defaultAccountsToBurn[4]);
+        await addValidatorAndSelfStake(contract, cqtContract, opManager, delegators[4], 4);
 
-        await addValidatorAndSelfStake(contract, cqtContract, opManager, d5, 4);
+        const unscaledStakesD0 = [100, 10, 20, 90, 1];
+        const unscaledStakesD1 = [20, 200, 5, 80, 2];
+        const unscaledStakesD2 = [5, 11, 10, 5, 3];
+        const unscaledStakesD3 = [1, 14, 12, 2, 4];
+        const unscaledStakesD4 = [17, 16, 120, 2, 70];
+        const unscaledStakesD5 = [120, 15, 2, 9, 7];
 
-        const unscaledStakesD1 = [100, 10, 20, 90, 1];
-        const unscaledStakesD2 = [20, 200, 5, 80, 2];
-        const unscaledStakesD3 = [5, 11, 10, 5, 3];
-        const unscaledStakesD4 = [1, 14, 12, 2, 4];
-        const unscaledStakesD5 = [17, 16, 120, 2, 70];
+        const delegatorStaked = [unscaledStakesD0, unscaledStakesD1, unscaledStakesD2, unscaledStakesD3, unscaledStakesD4, unscaledStakesD5];
 
         const validatorIds = [0, 1, 2, 3, 4];
 
-        await stakeToValidators(validatorIds, unscaledStakesD1, contract, d1, cqtContract);
-        await stakeToValidators(validatorIds, unscaledStakesD2, contract, d2, cqtContract);
-        await stakeToValidators(validatorIds, unscaledStakesD3, contract, d3, cqtContract);
-        await stakeToValidators(validatorIds, unscaledStakesD4, contract, d4, cqtContract);
-        await stakeToValidators(validatorIds, unscaledStakesD5, contract, d5, cqtContract);
+        let totalSum = 0;
+        for (let index = 0; index < delegators.length; index++) {
+            const d = delegators[index];
+            const staked = delegatorStaked[index];
+            await stakeToValidators(validatorIds, staked, contract, d, cqtContract);
+            let r = await getDelegatorBalances(contract, d.address);
+            let sum = getScaledAmountsSum(staked);
+            if (index == 4) {
+                expect(r.sum).to.equal(sum.add(selfStakedPerValidator));
+            }
+            else {
+                expect(r.sum).to.equal(sum);
+            }
 
-        let r1 = await getDelegatorBalances(contract, d1.address);
-        let sum1 = getScaledAmountsSum(unscaledStakesD1);
-        expect(r1.sum).to.equal(sum1);
+            totalSum = sum.add(totalSum);
+        }
 
-        let sum2 = getScaledAmountsSum(unscaledStakesD2);
-        let r2 = await getDelegatorBalances(contract, d2.address);
-        expect(r2.sum).to.equal(sum2);
-
-        let sum3 = getScaledAmountsSum(unscaledStakesD3);
-        let r3 = await getDelegatorBalances(contract, d3.address);
-        expect(r3.sum).to.equal(sum3);
-
-        let sum4 = getScaledAmountsSum(unscaledStakesD4);
-        let r4 = await getDelegatorBalances(contract, d4.address);
-        expect(r4.sum).to.equal(sum4);
-
-        let sum5 = getScaledAmountsSum(unscaledStakesD5);
-        let r5 = await getDelegatorBalances(contract, d5.address);
-        expect(r5.sum).to.equal(sum5.add(oneToken.mul(10000)));
-
-        const expectedBalance = sum1.add(sum2).add(sum3).add(sum4.add(sum5)).add(deposited).add(selfStaked);
+        const expectedBalance = totalSum.add(deposited).add(selfStakedTotal);
         expect(await cqtContract.balanceOf(contract.address)).to.equal(expectedBalance.toString());
 
         const migrationStaking = await upgradeToMigrationStaking(contract, owner);
-        await migrationStaking.connect(owner).burnDefaultDelegators();
+        let res = await migrationStaking.connect(owner).burnDefaultDelegators();
+        const newOriginalStaking = await upgradeToOriginalStaking(migrationStaking, owner);
+
+        for (let index = 0; index < delegators.length; index++) {
+            const d = delegators[index];
+            let sum = getScaledAmountsSum(delegatorStaked[index]);
+            expect(res)
+                .to.emit(contract, 'MadCQTBurnt')
+                .withArgs(sum);
+            let r = await getDelegatorBalances(newOriginalStaking, d.address);
+            if (index == 4) {
+                expect(r.sum).to.equal(oneToken.mul(10070));
+            }
+            else {
+                expect(r.sum).to.equal(0);
+            }
+        }
+    }
+    );
+
+
+    it('Old balance minus sum of amounts in MadCQTBurnt events should match the total staked and delegated', async function () {
+        const owner = await getOwner();
+        const [
+            opManager,
+            contract,
+            cqtContract,
+            validator1,
+            validator2,
+            delegator1,
+            delegator2,
+        ] = await getAll();
+
+        const deposited = oneToken.mul(1000);
+        await deposit(contract, deposited);
+
+        let delegators = [];
+        for (let index = 0; index < defaultAccountsToBurn.length; index++) {
+            const d = await getSigner(defaultAccountsToBurn[index]);
+            delegators.push(d);
+
+        }
+
+        await addValidatorAndSelfStake(contract, cqtContract, opManager, validator1, 0);
+        await addValidatorAndSelfStake(contract, cqtContract, opManager, validator2, 1);
+        await addValidatorAndSelfStake(contract, cqtContract, opManager, delegator1, 2);
+        await addValidatorAndSelfStake(contract, cqtContract, opManager, delegator2, 3);
+        const selfStakedPerValidator = oneToken.mul(10000);
+        const selfStakedTotal = oneToken.mul(10000).mul(5);
+
+        await expect((await contract.getMetadata()).CQTaddress).to.equal(CQT_ETH_MAINNET);
+
+        await addValidatorAndSelfStake(contract, cqtContract, opManager, delegators[4], 4);
+
+        const unscaledStakesD0 = [100, 10, 20, 90, 1];
+        const unscaledStakesD1 = [20, 200, 5, 80, 2];
+        const unscaledStakesD2 = [5, 11, 10, 5, 3];
+        const unscaledStakesD3 = [1, 14, 12, 2, 4];
+        const unscaledStakesD4 = [17, 16, 120, 2, 70];
+        const unscaledStakesD5 = [120, 15, 2, 9, 7];
+
+        const delegatorStaked = [unscaledStakesD0, unscaledStakesD1, unscaledStakesD2, unscaledStakesD3, unscaledStakesD4, unscaledStakesD5];
+
+        const validatorIds = [0, 1, 2, 3, 4];
+
+        let totalSum = 0;
+        for (let index = 0; index < delegators.length; index++) {
+            const d = delegators[index];
+            const staked = delegatorStaked[index];
+            await stakeToValidators(validatorIds, staked, contract, d, cqtContract);
+            let r = await getDelegatorBalances(contract, d.address);
+            let sum = getScaledAmountsSum(staked);
+            if (index == 4) {
+                expect(r.sum).to.equal(sum.add(selfStakedPerValidator));
+            }
+            else {
+                expect(r.sum).to.equal(sum);
+            }
+
+            totalSum = sum.add(totalSum);
+        }
+
+        const expectedBalance = totalSum.add(deposited).add(selfStakedTotal);
+        const currentBalance = await cqtContract.balanceOf(contract.address);
+        expect(currentBalance).to.equal(expectedBalance.toString());
+
+        const migrationStaking = await upgradeToMigrationStaking(contract, owner);
+        let res = await migrationStaking.connect(owner).burnDefaultDelegators();
+        let allBurnt = await getMadCQTBurntAmount(res);
+
 
         const newOriginalStaking = await upgradeToOriginalStaking(migrationStaking, owner);
 
-        r1 = await getDelegatorBalances(newOriginalStaking, d1.address);
-        expect(r1.sum).to.equal(0);
 
-        r2 = await getDelegatorBalances(newOriginalStaking, d2.address);
-        expect(r2.sum).to.equal(0);
+        for (let index = 0; index < delegators.length; index++) {
+            const d = delegators[index];
+            let sum = getScaledAmountsSum(delegatorStaked[index]);
+            expect(res)
+                .to.emit(contract, 'MadCQTBurnt')
+                .withArgs(sum);
 
-        r3 = await getDelegatorBalances(newOriginalStaking, d3.address);
-        expect(r3.sum).to.equal(0);
+            let r = await getDelegatorBalances(newOriginalStaking, d.address);
+            if (index == 4) {
+                expect(r.sum).to.equal(oneToken.mul(10070));
+            }
+            else {
+                expect(r.sum).to.equal(0);
+            }
+        }
 
-        r4 = await getDelegatorBalances(newOriginalStaking, d4.address);
-        expect(r4.sum).to.equal(0);
+        let newTotalSum = 0;
 
-        r5 = await getDelegatorBalances(newOriginalStaking, d5.address);
-        expect(r5.sum).to.equal(oneToken.mul(10070));
+        let nonDelegatingValidators = [validator1, validator2, delegator1, delegator2];
+        const all = delegators.concat(nonDelegatingValidators);
+        for (let index = 0; index < all.length; index++) {
+            const v = all[index];
+            let s = await getDelegatorBalances(newOriginalStaking, v.address);
+            newTotalSum = s.sum.add(newTotalSum);
+        }
+
+        let depositedNew = (await contract.getMetadata())._rewardPool;
+        newTotalSum = newTotalSum.add(depositedNew);
+        let newExpectedVirtualBalance = currentBalance.sub(allBurnt);
+
+        expect(newExpectedVirtualBalance).to.equal(newTotalSum);
     }
     );
 
@@ -285,58 +403,58 @@ describe('Initialize contract', function () {
         const d3 = await getSigner(defaultAccountsToBurn[2]);
         const d4 = await getSigner(defaultAccountsToBurn[3]);
 
+        const ds = [d1, d2, d3, d4];
+
         const unscaledStakesD1 = [100, 10, 20];
         const unscaledStakesD2 = [20, 200, 5];
         const unscaledStakesD3 = [5, 11, 10];
         const unscaledStakesD4 = [1, 14, 12];
 
+        const delegatorStakes = [unscaledStakesD1, unscaledStakesD2, unscaledStakesD3, unscaledStakesD4];
+
         const validatorIds = [0, 1, 2, 3];
 
-        await stakeToValidators(validatorIds, unscaledStakesD1, contract, d1, cqtContract);
-        await stakeToValidators(validatorIds, unscaledStakesD2, contract, d2, cqtContract);
-        await stakeToValidators(validatorIds, unscaledStakesD3, contract, d3, cqtContract);
-        await stakeToValidators(validatorIds, unscaledStakesD4, contract, d4, cqtContract);
+        let totalSum = 0;
+        let sums = [];
+        for (let index = 0; index < ds.length; index++) {
+            const d = ds[index];
+            const staked = delegatorStakes[index];
+            await stakeToValidators(validatorIds, staked, contract, d, cqtContract);
 
-        let r1 = await getDelegatorBalances(contract, d1.address);
-        let sum1 = getScaledAmountsSum(unscaledStakesD1);
-        expect(r1.sum).to.equal(sum1);
+            let r = await getDelegatorBalances(contract, d.address);
+            let sum = getScaledAmountsSum(staked);
+            expect(r.sum).to.equal(sum);
 
-        let sum2 = getScaledAmountsSum(unscaledStakesD2);
-        let r2 = await getDelegatorBalances(contract, d2.address);
-        expect(r2.sum).to.equal(sum2);
+            totalSum = sum.add(totalSum);
+            sums.push(sum);
+        }
 
-        let sum3 = getScaledAmountsSum(unscaledStakesD3);
-        let r3 = await getDelegatorBalances(contract, d3.address);
-        expect(r3.sum).to.equal(sum3);
-
-        let sum4 = getScaledAmountsSum(unscaledStakesD4);
-        let r4 = await getDelegatorBalances(contract, d4.address);
-        expect(r4.sum).to.equal(sum4);
-
-
-        const expectedBalance = sum1.add(sum2).add(sum3).add(sum4).add(deposited).add(selfStaked);
+        const expectedBalance = totalSum.add(deposited).add(selfStaked);
         expect(await cqtContract.balanceOf(contract.address)).to.equal(expectedBalance.toString());
 
         const migrationStaking = await upgradeToMigrationStaking(contract, owner);
 
-        await migrationStaking.connect(owner).burnDelegatorBalance(0, d1.address);
-        await migrationStaking.connect(owner).burnDelegatorBalance(1, d2.address);
-        await migrationStaking.connect(owner).burnDelegatorBalance(2, d3.address);
-        await migrationStaking.connect(owner).burnDelegatorBalance(2, d4.address);
+        let ids = [0, 1, 2, 2];
+        for (let index = 0; index < ds.length; index++) {
+            const d = ds[index];
+            const id = ids[index];
+            let res = await migrationStaking.connect(owner).burnDelegatorBalance(id, d.address);
+
+            const burntStake = oneToken.mul(delegatorStakes[index][id]);
+            expect(res)
+                .to.emit(contract, 'MadCQTBurnt')
+                .withArgs(burntStake);
+        }
 
         const newOriginalStaking = await upgradeToOriginalStaking(migrationStaking, owner);
 
-        r1 = await getDelegatorBalances(newOriginalStaking, d1.address);
-        expect(r1.sum).to.equal(sum1.sub(oneToken.mul(unscaledStakesD1[0])));
-
-        r2 = await getDelegatorBalances(newOriginalStaking, d2.address);
-        expect(r2.sum).to.equal(sum2.sub(oneToken.mul(unscaledStakesD2[1])));
-
-        r3 = await getDelegatorBalances(newOriginalStaking, d3.address);
-        expect(r3.sum).to.equal(sum3.sub(oneToken.mul(unscaledStakesD3[2])));
-
-        r4 = await getDelegatorBalances(newOriginalStaking, d4.address);
-        expect(r4.sum).to.equal(sum4.sub(oneToken.mul(unscaledStakesD4[2])));
+        for (let index = 0; index < ds.length; index++) {
+            const d = ds[index];
+            const id = ids[index];
+            const burntStake = oneToken.mul(delegatorStakes[index][id]);
+            r = await getDelegatorBalances(newOriginalStaking, d.address);
+            expect(r.sum).to.equal(sums[index].sub(burntStake));
+        }
     }
     );
 
