@@ -179,7 +179,6 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
     function setCQTAddress(address newCQT) external onlyOwner {
         require(newCQT != address(0), "Invalid CQT address");
         require(newCQT != address(CQT), "New CQT address cannot be equal to the old one");
-        require(CQT.balanceOf(address(this)) == 0, "Cannot change CQT address when balance is > 0");
         CQT = IERC20Upgradeable(newCQT);
         emit CQTAddressChanged(newCQT);
     }

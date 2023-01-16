@@ -571,25 +571,6 @@ describe('Initialize contract', function () {
         ).to.be.revertedWith("Invalid CQT address");
     });
 
-    it('Should revert when attempt to set CQT address with balance > 0', async function () {
-        const [
-            opManager,
-            originalContrtact,
-            cqtContract,
-            validator1,
-            validator2,
-            delegator1,
-            delegator2,
-        ] = await getAll();
-        const owner = await getOwner();
-        const deposited = oneToken.mul(10000);
-        await deposit(originalContrtact, deposited);
-        const contract = await upgradeToMigrationStaking(originalContrtact, owner);
-        await expect(
-            contract.connect(opManager).setCQTAddress(owner.address),
-        ).to.be.revertedWith("Cannot change CQT address when balance is > 0");
-    });
-
     it('Should revert when the given CQT address is zero', async function () {
         const [
             opManager,
