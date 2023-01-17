@@ -9,10 +9,10 @@ require("@openzeppelin/hardhat-defender");
 
 
 module.exports = {
-    defender: {
-        apiKey: process.env.DEFENDER_API_KEY,
-        apiSecret: process.env.DEFENDER_SECRET_KEY,
-    },
+    // defender: {
+    //     apiKey: process.env.DEFENDER_API_KEY,
+    //     apiSecret: process.env.DEFENDER_SECRET_KEY,
+    // },
     solidity: {
         version: '0.8.13',
         settings: {
@@ -66,8 +66,8 @@ module.exports = {
             url: 'http://0.0.0.0:8545/',
         },
         moonbeam: {
-            url: "https://rpc.api.moonbeam.network",
-            accounts: [process.env.MOONBEAM_PROD_PROOFCHAIN_GOVERNOR]
+            url: "https://rpc.api.moonbeam.network" //,
+            // accounts: [process.env.MOONBEAM_PROD_PROOFCHAIN_GOVERNOR]
         },
     },
 };
