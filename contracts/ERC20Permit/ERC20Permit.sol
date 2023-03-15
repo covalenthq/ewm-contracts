@@ -50,15 +50,7 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
      * @param r r value/ x-value of ecdsa signature
      * @param s s value of ecdsa signature
      */
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual override {
+    function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public virtual override {
         require(block.timestamp <= deadline, "CovalentPermit: expired deadline");
 
         bytes32 hashStruct = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, _nonces[owner].current(), deadline));

@@ -7,8 +7,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 contract MigrationOperationalStaking is OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint256 public constant DIVIDER = 10**18; // 18 decimals used for scaling rates
-    uint128 public constant REWARD_REDEEM_THRESHOLD = 10**8; // minimum number of tokens that can be redeemed
+    uint256 public constant DIVIDER = 10 ** 18; // 18 decimals used for scaling rates
+    uint128 public constant REWARD_REDEEM_THRESHOLD = 10 ** 8; // minimum number of tokens that can be redeemed
 
     IERC20Upgradeable public CQT;
     uint128 public rewardPool; // how many tokens are allocated for rewards
@@ -227,17 +227,14 @@ contract MigrationOperationalStaking is OwnableUpgradeable {
      * Returns the amount that's staked, earned by delegator plus unstaking information.
      * CommissionEarned is for validators
      */
-    function getDelegatorMetadata(address delegator, uint128 validatorId)
+    function getDelegatorMetadata(
+        address delegator,
+        uint128 validatorId
+    )
         external
         view
         validValidatorId(validatorId)
-        returns (
-            uint128 staked,
-            uint128 rewards,
-            uint128 commissionEarned,
-            uint128[] memory unstakingAmounts,
-            uint128[] memory unstakingsEndEpochs
-        )
+        returns (uint128 staked, uint128 rewards, uint128 commissionEarned, uint128[] memory unstakingAmounts, uint128[] memory unstakingsEndEpochs)
     {
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[delegator];

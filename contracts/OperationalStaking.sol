@@ -7,8 +7,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 contract OperationalStaking is OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint256 public constant DIVIDER = 10**18; // 18 decimals used for scaling rates
-    uint128 public constant REWARD_REDEEM_THRESHOLD = 10**8; // minimum number of tokens that can be redeemed
+    uint256 public constant DIVIDER = 10 ** 18; // 18 decimals used for scaling rates
+    uint128 public constant REWARD_REDEEM_THRESHOLD = 10 ** 8; // minimum number of tokens that can be redeemed
 
     IERC20Upgradeable public CQT;
     uint128 public rewardPool; // how many tokens are allocated for rewards
@@ -92,13 +92,7 @@ contract OperationalStaking is OwnableUpgradeable {
         _;
     }
 
-    function initialize(
-        address cqt,
-        uint128 dCoolDown,
-        uint128 vCoolDown,
-        uint128 maxCapM,
-        uint128 vMaxStake
-    ) external initializer {
+    function initialize(address cqt, uint128 dCoolDown, uint128 vCoolDown, uint128 maxCapM, uint128 vMaxStake) external initializer {
         __Ownable_init();
         validatorCoolDown = vCoolDown; // 180*6857 = ~ 6 months
         delegatorCoolDown = dCoolDown; //  28*6857 = ~ 28 days
@@ -279,11 +273,7 @@ contract OperationalStaking is OwnableUpgradeable {
      * withTransfer is set to false when delegators recover unstaked or redelegated tokens.
      * These tokens are already in the contract.
      */
-    function _stake(
-        uint128 validatorId,
-        uint128 amount,
-        bool withTransfer
-    ) internal validValidatorId(validatorId) {
+    function _stake(uint128 validatorId, uint128 amount, bool withTransfer) internal validValidatorId(validatorId) {
         require(amount >= REWARD_REDEEM_THRESHOLD, "Stake amount is too small");
         Validator storage v = _validators[validatorId];
         bool isValidator = msg.sender == v._address;
@@ -364,11 +354,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Restakes unstaked tokens
      */
-    function recoverUnstaking(
-        uint128 amount,
-        uint128 validatorId,
-        uint128 unstakingId
-    ) external validValidatorId(validatorId) {
+    function recoverUnstaking(uint128 amount, uint128 validatorId, uint128 unstakingId) external validValidatorId(validatorId) {
         require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(us.amount >= amount, "Unstaking has less tokens");
@@ -384,11 +370,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Transfers out unlocked unstaked tokens back to the delegator
      */
-    function transferUnstakedOut(
-        uint128 amount,
-        uint128 validatorId,
-        uint128 unstakingId
-    ) external validValidatorId(validatorId) {
+    function transferUnstakedOut(uint128 amount, uint128 validatorId, uint128 unstakingId) external validValidatorId(validatorId) {
         require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(uint128(block.number) > us.coolDownEnd, "Cooldown period has not ended");
@@ -412,20 +394,12 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Redeems partial rewards
      */
-    function redeemRewards(
-        uint128 validatorId,
-        address beneficiary,
-        uint128 amount
-    ) external {
+    function redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) external {
         require(amount > 0, "Amount is 0");
         _redeemRewards(validatorId, beneficiary, amount);
     }
 
-    function _redeemRewards(
-        uint128 validatorId,
-        address beneficiary,
-        uint128 amount
-    ) internal validValidatorId(validatorId) {
+    function _redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) internal validValidatorId(validatorId) {
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[msg.sender];
@@ -461,11 +435,7 @@ contract OperationalStaking is OwnableUpgradeable {
         _transferFromContract(beneficiary, amountToRedeem);
     }
 
-    function redeemCommission(
-        uint128 validatorId,
-        address beneficiary,
-        uint128 amount
-    ) public validValidatorId(validatorId) {
+    function redeemCommission(uint128 validatorId, address beneficiary, uint128 amount) public validValidatorId(validatorId) {
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         require(v._address == msg.sender, "The sender is not the validator");
@@ -560,18 +530,9 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Returns validator metadata with how many tokens were staked and delegated excluding compounded rewards
      */
-    function getValidatorMetadata(uint128 validatorId)
-        public
-        view
-        validValidatorId(validatorId)
-        returns (
-            address _address,
-            uint128 staked,
-            uint128 delegated,
-            uint128 commissionRate,
-            uint256 disabledAtBlock
-        )
-    {
+    function getValidatorMetadata(
+        uint128 validatorId
+    ) public view validValidatorId(validatorId) returns (address _address, uint128 staked, uint128 delegated, uint128 commissionRate, uint256 disabledAtBlock) {
         Validator storage v = _validators[validatorId];
         return (v._address, v.stakings[v._address].staked, v.delegated, v.commissionRate, v.disabledAtBlock);
     }
@@ -582,13 +543,7 @@ contract OperationalStaking is OwnableUpgradeable {
     function getAllValidatorsMetadata()
         external
         view
-        returns (
-            address[] memory addresses,
-            uint128[] memory staked,
-            uint128[] memory delegated,
-            uint128[] memory commissionRates,
-            uint256[] memory disabledAtBlocks
-        )
+        returns (address[] memory addresses, uint128[] memory staked, uint128[] memory delegated, uint128[] memory commissionRates, uint256[] memory disabledAtBlocks)
     {
         return getValidatorsMetadata(0, validatorsN);
     }
@@ -596,17 +551,10 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Returns metadata for validators whose ids are between startId and endId exclusively
      */
-    function getValidatorsMetadata(uint128 startId, uint128 endId)
-        public
-        view
-        returns (
-            address[] memory addresses,
-            uint128[] memory staked,
-            uint128[] memory delegated,
-            uint128[] memory commissionRates,
-            uint256[] memory disabledAtBlocks
-        )
-    {
+    function getValidatorsMetadata(
+        uint128 startId,
+        uint128 endId
+    ) public view returns (address[] memory addresses, uint128[] memory staked, uint128[] memory delegated, uint128[] memory commissionRates, uint256[] memory disabledAtBlocks) {
         require(endId <= validatorsN, "Invalid end id");
         require(startId < endId, "Start id must be less than end id");
 
@@ -649,17 +597,14 @@ contract OperationalStaking is OwnableUpgradeable {
      * Returns the amount that's staked, earned by delegator plus unstaking information.
      * CommissionEarned is for validators
      */
-    function getDelegatorMetadata(address delegator, uint128 validatorId)
+    function getDelegatorMetadata(
+        address delegator,
+        uint128 validatorId
+    )
         external
         view
         validValidatorId(validatorId)
-        returns (
-            uint128 staked,
-            uint128 rewards,
-            uint128 commissionEarned,
-            uint128[] memory unstakingAmounts,
-            uint128[] memory unstakingsEndEpochs
-        )
+        returns (uint128 staked, uint128 rewards, uint128 commissionEarned, uint128[] memory unstakingAmounts, uint128[] memory unstakingsEndEpochs)
     {
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[delegator];

@@ -13,11 +13,7 @@ import {ERC20Permit} from "./ERC20Permit/ERC20Permit.sol";
  * @dev Covalent ERC20 Token
  */
 contract CovalentQueryTokenFaucet is ERC20Permit, Ownable {
-    constructor(
-        string memory name,
-        string memory symbol,
-        uint256 totalSupply
-    ) public ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, uint256 totalSupply) public ERC20(name, symbol) {
         _mint(msg.sender, totalSupply);
     }
 
@@ -29,11 +25,7 @@ contract CovalentQueryTokenFaucet is ERC20Permit, Ownable {
      * @param destination User address
      * @param amount Amount of tokens
      */
-    function rescueTokens(
-        address token,
-        address destination,
-        uint256 amount
-    ) external onlyOwner {
+    function rescueTokens(address token, address destination, uint256 amount) external onlyOwner {
         require(token != destination, "Invalid address");
         require(ERC20(token).transfer(destination, amount), "Retrieve failed");
     }

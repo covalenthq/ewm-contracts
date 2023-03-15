@@ -14,7 +14,7 @@ contract ProofChain is OwnableUpgradeable {
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant BLOCK_SPECIMEN_PRODUCER_ROLE = keccak256("BLOCK_SPECIMEN_PRODUCER_ROLE");
     bytes32 public constant AUDITOR_ROLE = keccak256("AUDITOR_ROLE");
-    uint256 private constant _DIVIDER = 10**18; // 18 decimals used for scaling
+    uint256 private constant _DIVIDER = 10 ** 18; // 18 decimals used for scaling
 
     uint256 private _blockSpecimenQuorum; // The value is represented as a uint <= 10**18. The threshold value will later be divided by 10**18 to represent it as a percentage.  e.g.) 10**18 == 100%; 5 * 10**17 == 50%;
     uint256 private _secondsPerBlock; // average block time on the chain where the ProofChain is deployed
@@ -132,7 +132,7 @@ contract ProofChain is OwnableUpgradeable {
         _roleNames.add(AUDITOR_ROLE);
 
         setQuorumThreshold(_DIVIDER / 2); // 50%
-        setBlockSpecimenReward(10**14); // 0.0001
+        setBlockSpecimenReward(10 ** 14); // 0.0001
         setBlockSpecimenSessionDuration(240); // blocks
         setMinSubmissionsRequired(2);
         setStakingInterface(stakingContract);
@@ -324,12 +324,7 @@ contract ProofChain is OwnableUpgradeable {
     /**
      * Update chain sync data
      */
-    function setChainSyncData(
-        uint64 chainId,
-        uint256 blockOnTargetChain,
-        uint256 blockOnCurrentChain,
-        uint256 secondsPerBlock
-    ) external onlyGovernor {
+    function setChainSyncData(uint64 chainId, uint256 blockOnTargetChain, uint256 blockOnCurrentChain, uint256 secondsPerBlock) external onlyGovernor {
         ChainData storage cd = _chainData[chainId];
         require(secondsPerBlock > 0, "Seconds per block cannot be 0");
         cd.blockOnTargetChain = blockOnTargetChain;
@@ -357,13 +352,7 @@ contract ProofChain is OwnableUpgradeable {
     /**
      * Block Specimen Producers submit their block specimen proofs using this function.
      */
-    function submitBlockSpecimenProof(
-        uint64 chainId,
-        uint64 blockHeight,
-        bytes32 blockHash,
-        bytes32 specimenHash,
-        string calldata storageURL
-    ) external {
+    function submitBlockSpecimenProof(uint64 chainId, uint64 blockHeight, bytes32 blockHash, bytes32 specimenHash, string calldata storageURL) external {
         require(_blockSpecimenProducers.contains(msg.sender), "Sender is not BLOCK_SPECIMEN_PRODUCER_ROLE");
         ChainData storage cd = _chainData[chainId];
         require(cd.nthBlock != 0, "Invalid chain ID");
@@ -477,25 +466,14 @@ contract ProofChain is OwnableUpgradeable {
      * Called by Auditor role when a quorum is not reached. The auditor's submitted hash is
      * the definitive truth.
      */
-    function arbitrateBlockSpecimenSession(
-        uint64 chainId,
-        uint64 blockHeight,
-        bytes32 blockHash,
-        bytes32 definitiveSpecimenHash
-    ) public {
+    function arbitrateBlockSpecimenSession(uint64 chainId, uint64 blockHeight, bytes32 blockHash, bytes32 definitiveSpecimenHash) public {
         require(_auditors.contains(msg.sender), "Sender is not AUDITOR_ROLE");
         BlockSpecimenSession storage session = _sessions[chainId][blockHeight];
         require(session.requiresAudit, "Session must be finalized before audit");
         _rewardParticipants(session, chainId, blockHeight, blockHash, definitiveSpecimenHash);
     }
 
-    function _rewardParticipants(
-        BlockSpecimenSession storage session,
-        uint64 chainId,
-        uint64 blockHeight,
-        bytes32 blockHash,
-        bytes32 specimenHash
-    ) internal {
+    function _rewardParticipants(BlockSpecimenSession storage session, uint64 chainId, uint64 blockHeight, bytes32 blockHash, bytes32 specimenHash) internal {
         address participant;
         address[] storage participants = session.blockHashes[blockHash].participants[specimenHash];
         uint256 len = participants.length;
@@ -544,17 +522,12 @@ contract ProofChain is OwnableUpgradeable {
     /**
      * Returns data used for chain sync
      */
-    function getChainData(uint64 chainId)
+    function getChainData(
+        uint64 chainId
+    )
         external
         view
-        returns (
-            uint256 blockOnTargetChain,
-            uint256 blockOnCurrentChain,
-            uint256 secondsPerBlock,
-            uint128 allowedThreshold,
-            uint128 maxSubmissionsPerBlockHeight,
-            uint64 nthBlock
-        )
+        returns (uint256 blockOnTargetChain, uint256 blockOnCurrentChain, uint256 secondsPerBlock, uint128 allowedThreshold, uint128 maxSubmissionsPerBlockHeight, uint64 nthBlock)
     {
         ChainData memory cd = _chainData[chainId];
         return (cd.blockOnTargetChain, cd.blockOnCurrentChain, cd.secondsPerBlock, cd.allowedThreshold, cd.maxSubmissionsPerBlockHeight, cd.nthBlock);
@@ -570,15 +543,7 @@ contract ProofChain is OwnableUpgradeable {
     /**
      * Returns all enabled operators by role type
      */
-    function getAllOperators()
-        external
-        view
-        returns (
-            address[] memory _bsps,
-            address[] memory __governors,
-            address[] memory __auditors
-        )
-    {
+    function getAllOperators() external view returns (address[] memory _bsps, address[] memory __governors, address[] memory __auditors) {
         return (_blockSpecimenProducers.values(), _governors.values(), _auditors.values());
     }
 

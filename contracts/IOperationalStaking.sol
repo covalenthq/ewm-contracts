@@ -2,15 +2,7 @@
 pragma solidity ^0.8.13;
 
 interface IOperationalStaking {
-    function getValidatorMetadata(uint128 validatorId)
-        external
-        view
-        returns (
-            address _address,
-            uint128 staked,
-            uint128 delegated,
-            uint128 commissionRate
-        );
+    function getValidatorMetadata(uint128 validatorId) external view returns (address _address, uint128 staked, uint128 delegated, uint128 commissionRate);
 
     function getValidatorStakingData(uint128 validatorId) external view returns (uint128 staked, uint128 delegated);
 
