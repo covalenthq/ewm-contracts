@@ -16,7 +16,7 @@
         "ethers": "^5.7.1",
         "hardhat": "^2.9.0",
         "hardhat-contract-sizer": "^2.5.1",
-        "hardhat-gas-reporter": "^1.0.7",
+        "hardhat-gas-reporter": "^1.0.9",
         "solhint-ci": "^4.0.2",
         "solidity-coverage": "^0.8.2"
     },
