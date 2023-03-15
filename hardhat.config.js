@@ -66,8 +66,8 @@ module.exports = {
             url: 'http://0.0.0.0:8545/',
         },
         moonbeam: {
-            url: "https://rpc.api.moonbeam.network" //,
-            // accounts: [process.env.MOONBEAM_PROD_PROOFCHAIN_GOVERNOR]
+            url: process.env.MOONBEAM_NODE,
+            accounts: [process.env.MOONBEAM_PROD_PROOFCHAIN_GOVERNOR]
         },
     },
 };
