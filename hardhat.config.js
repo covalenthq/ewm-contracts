@@ -65,9 +65,9 @@ module.exports = {
         test: {
             url: 'http://0.0.0.0:8545/',
         },
-        moonbeam: {
-            url: process.env.MOONBEAM_NODE,
-            accounts: [process.env.MOONBEAM_PROD_PROOFCHAIN_GOVERNOR]
-        },
+        // moonbeam: {
+        //     url: process.env.MOONBEAM_NODE,
+        //     accounts: [process.env.MOONBEAM_PROD_PROOFCHAIN_GOVERNOR]
+        // },
     },
 };
