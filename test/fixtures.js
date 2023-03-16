@@ -159,7 +159,7 @@ const getDelegatorCoolDown = async (contract) => (await contract.getMetadata()).
 
 const addEnabledValidator = async (id, contract, opManager, vAddress, cRate) => {
   await contract.connect(opManager).addValidator(vAddress, cRate);
-  await contract.connect(opManager).enableValidator(id);
+  return await contract.connect(opManager).enableValidator(id);
 };
 
 const deployUpgradeableContract = async (contractName, owner, params) => {
@@ -176,17 +176,17 @@ const deployStaking = async (params) => await deployUpgradeableContract('Operati
 const deposit = async (contract, amount) => {
   const cqtContract = await getCqtContract();
   await cqtContract.approve(contract.address, amount);
-  await contract.depositRewardTokens(amount);
+  return await contract.depositRewardTokens(amount);
 };
 
 const giveCQT = async (amount, recipientAddress, cqtContract) => {
     const tokenHolder = await getSigner(TOKEN_HOLDERS_ADDRESSES[0])
-    await cqtContract.connect(tokenHolder).transfer(recipientAddress, amount)
+    return await cqtContract.connect(tokenHolder).transfer(recipientAddress, amount)
 }
 
 const stake = async (amount, signer, cqtContract, contract, id) => {
   await cqtContract.connect(signer).approve(contract.address, amount);
-  await contract.connect(signer).stake(id, amount);
+  return await contract.connect(signer).stake(id, amount);
 };
 
 
