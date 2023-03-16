@@ -101,7 +101,7 @@ describe('Block Specimen Arbitration Tests', function() {
     newSessionDuration = 20;
     await proofChain
         .connect(owner)
-        .setBlockSpecimenSessionDuration(newSessionDuration);
+        .setSessionDuration(newSessionDuration);
 
     await proofChain
             .connect(operators[1])
@@ -127,7 +127,7 @@ describe('Block Specimen Arbitration Tests', function() {
     newSessionDuration = 20;
     await proofChain
         .connect(owner)
-        .setBlockSpecimenSessionDuration(newSessionDuration);
+        .setSessionDuration(newSessionDuration);
 
     await proofChain
             .connect(operators[1])
@@ -156,7 +156,7 @@ describe('Block Specimen Arbitration Tests', function() {
     newSessionDuration = 20;
     await proofChain
         .connect(owner)
-        .setBlockSpecimenSessionDuration(newSessionDuration);
+        .setSessionDuration(newSessionDuration);
 
     await expect(
         proofChain
@@ -187,7 +187,7 @@ describe('Block Specimen Arbitration Tests', function() {
 
 
   it('Should emit BlockSpecimenRewardAwarded with correct args when quorum not reached', async function() {
-      await proofChain.connect(owner).setBlockSpecimenSessionDuration(10);
+      await proofChain.connect(owner).setSessionDuration(10);
       await proofChain.connect(owner).addAuditor(delegators[1].address)
 
       for (i = 0; i < 3; i++) {
@@ -232,7 +232,7 @@ describe('Block Specimen Arbitration Tests', function() {
       await mineBlocks(10)
 
       await expect(proofChain.connect(owner).finalizeAndRewardSpecimenSession( chainId, blockHeight))
-      .to.emit(proofChain, 'QuorumNotReached').withArgs(chainId, blockHeight);
+      .to.emit(proofChain, 'BSPQuorumNotReached').withArgs(chainId, blockHeight);
 
       await expect(proofChain
         .connect(delegators[1])
@@ -285,7 +285,7 @@ describe('Block Specimen Arbitration Tests', function() {
 
 
   it('Should emit BlockSpecimenRewardAwarded with correct args when correct hash was not submitted by anyone', async function() {
-    await proofChain.connect(owner).setBlockSpecimenSessionDuration(10);
+    await proofChain.connect(owner).setSessionDuration(10);
     await proofChain.connect(operators[0])
             .submitBlockSpecimenProof(
                 chainId,
@@ -307,7 +307,7 @@ describe('Block Specimen Arbitration Tests', function() {
     await mineBlocks(10)
 
     await expect(proofChain.connect(owner).finalizeAndRewardSpecimenSession( chainId, blockHeight))
-    .to.emit(proofChain, 'QuorumNotReached').withArgs(chainId, blockHeight);
+    .to.emit(proofChain, 'BSPQuorumNotReached').withArgs(chainId, blockHeight);
 
     await proofChain.connect(owner).addAuditor(delegators[1].address)
 

@@ -195,7 +195,7 @@ describe('Tests submitBlockSpecimenProof()', function() {
 
 
     it('Should revert when attempt to submit after session has closed (reached its deadline)', async function() {
-        await proofChain.connect(owner).setBlockSpecimenSessionDuration(10);
+        await proofChain.connect(owner).setSessionDuration(10);
         await
             proofChain
                 .connect(operators[1])
@@ -223,7 +223,7 @@ describe('Tests submitBlockSpecimenProof()', function() {
       });
 
       it('Should revert when attempt to submit after session has closed reached its deadline and being finalized', async function() {
-        await proofChain.connect(owner).setBlockSpecimenSessionDuration(10);
+        await proofChain.connect(owner).setSessionDuration(10);
         await
             proofChain
                 .connect(operators[1])

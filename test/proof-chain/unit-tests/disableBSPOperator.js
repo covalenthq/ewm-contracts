@@ -2,8 +2,8 @@ const {
     setupDefaultOperators
   } = require('../../fixtures.js');
   const {expect} = require('chai');
-  
-  describe('Tests disable operator', function() {
+
+  describe('Tests disable BSP operator', function() {
     beforeEach(async function() {
       [contractsAndAccounts, parameters] = await setupDefaultOperators();
 
@@ -99,12 +99,12 @@ const {
     validatorID = 0;
 
     await expect(proofChain.connect(validators[validatorID]).disableBSPOperator(validators[validatorID].address)
-      ).to.be.revertedWith('Operator is not BSP');
+      ).to.be.revertedWith('Operator does not perform the requested role');
 
   await proofChain.connect(owner).addAuditor(delegators[0].address)
 
   await expect(proofChain.connect(validators[0]).disableBSPOperator( delegators[0].address),
-      ).to.be.revertedWith('Operator is not BSP');
+      ).to.be.revertedWith('Operator does not perform the requested role');
 
     await proofChain
         .connect(owner)
@@ -118,7 +118,7 @@ const {
             .disableBSPOperator(
                 operators[validatorID].address,
             ),
-    ).to.be.revertedWith('Operator is not BSP');
+    ).to.be.revertedWith('Operator does not perform the requested role');
   });
 
 

@@ -86,11 +86,11 @@ describe('Tests Governance control: removeBSPOperator()', function() {
     await proofChain.connect(owner).addGovernor(delegators[1].address);
     await expect(proofChain
         .connect(owner)
-        .removeBSPOperator(validators[0].address)).to.be.revertedWith('Operator is not BSP');
+        .removeBSPOperator(validators[0].address)).to.be.revertedWith('Operator does not perform the requested role');
 
         await expect(proofChain
             .connect(owner)
-            .removeBSPOperator(delegators[1].address)).to.be.revertedWith('Operator is not BSP');
+            .removeBSPOperator(delegators[1].address)).to.be.revertedWith('Operator does not perform the requested role');
   });
 
 });

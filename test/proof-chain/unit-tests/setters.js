@@ -53,18 +53,50 @@ describe('Tests all setters', function() {
 expect((await proofChain.connect(owner).getMetadata()).blockSpecimenRewardAllocation).to.equal(blockSpecimenRewardAllocation);
   });
 
+  it('Lets Governance change the blockSpecimenRewardAllocation', async function() {
+    await proofChain
+        .connect(owner)
+        .setBlockResultReward(blockSpecimenRewardAllocation);
+  });
+
+  it('Emits BlockResultRewardChanged', async function() {
+    await expect(
+        proofChain
+            .connect(owner)
+            .setBlockResultReward(blockSpecimenRewardAllocation),
+    )
+        .to.emit(proofChain, 'BlockResultRewardChanged')
+        .withArgs(blockSpecimenRewardAllocation);
+  });
+
+  it('Does not let non-governance change the blockResultRewardAllocation', async function() {
+    await expect(
+        proofChain
+            .connect(delegators[0])
+            .setBlockResultReward(blockSpecimenRewardAllocation),
+    ).to.be.revertedWith('Sender is not GOVERNANCE_ROLE');
+  });
+
+  it('Tests the getter for blockResultRewardAllocation', async function() {
+    await proofChain
+        .connect(owner)
+        .setBlockResultReward(blockSpecimenRewardAllocation);
+
+expect((await proofChain.connect(owner).getMetadata()).blockResultRewardAllocation).to.equal(blockSpecimenRewardAllocation);
+  });
+
 
   it('Lets Governance change the blockSpecimenSessionDuration', async function() {
     await proofChain
         .connect(owner)
-        .setBlockSpecimenSessionDuration(50);
+        .setSessionDuration(50);
   });
 
   it('Emits SpecimenSessionDurationChanged', async function() {
     await expect(
         proofChain
             .connect(owner)
-            .setBlockSpecimenSessionDuration(50),
+            .setSessionDuration(50),
     )
         .to.emit(proofChain, 'SpecimenSessionDurationChanged')
         .withArgs(50);
@@ -74,14 +106,14 @@ expect((await proofChain.connect(owner).getMetadata()).blockSpecimenRewardAlloca
     await expect(
         proofChain
             .connect(delegators[0])
-            .setBlockSpecimenSessionDuration(50),
+            .setSessionDuration(50),
     ).to.be.revertedWith('Sender is not GOVERNANCE_ROLE');
   });
 
   it('Tests the getter for blockSpecimenSessionDuration', async function() {
     await proofChain
         .connect(owner)
-        .setBlockSpecimenSessionDuration(50);
+        .setSessionDuration(50);
 
     await expect(
         (await proofChain.connect(owner).getMetadata()).blockSpecimenSessionDuration,
@@ -169,6 +201,54 @@ expect((await proofChain.connect(owner).getMetadata()).blockSpecimenRewardAlloca
                 .setBSPRequiredStake( oneToken),
         ).to.be.revertedWith('Sender is not GOVERNANCE_ROLE');
       });
+
+
+      it('Sets the required BRP stake', async function() {
+        [
+          owner,
+          stakingContract,
+          cqtContract,
+          proofChain,
+          validators,
+          operators,
+          delegators,
+        ] = await getAllWithProofchain();
+
+        await proofChain.connect(owner).setBRPRequiredStake(0);
+        await proofChain
+            .connect(owner)
+            .setBRPRequiredStake(
+                oneToken.mul(150000),
+            );
+
+        expect((await proofChain.getBRPRoleData()).requiredStake)
+            .to.equal(oneToken.mul(150000))
+      });
+
+      it ('Emits MinimumRequiredBlockResultStakeChanged', async function() {
+        [
+          owner,
+          stakingContract,
+          cqtContract,
+          proofChain,
+          validators,
+          operators,
+          delegators,
+        ] = await getAllWithProofchain();
+
+        newStakeRequired = oneToken.mul(150000);
+        await expect(proofChain.connect(owner).setBRPRequiredStake( newStakeRequired))
+            .to.emit(proofChain, 'MinimumRequiredBlockResultStakeChanged')
+            .withArgs( newStakeRequired);
+      });
+
+      it('Does not let non-governance change minimum stake required', async function() {
+          await expect(
+              proofChain
+                  .connect(delegators[0])
+                  .setBRPRequiredStake( oneToken),
+          ).to.be.revertedWith('Sender is not GOVERNANCE_ROLE');
+        });
 
 
 

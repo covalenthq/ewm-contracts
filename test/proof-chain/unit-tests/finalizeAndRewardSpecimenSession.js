@@ -83,7 +83,7 @@ const {
     });
 
     it('Changes require audit to true when not enough participants submitted, emits event and reverts if called again', async function() {
-      await proofChain.connect(owner).setBlockSpecimenSessionDuration(10);
+      await proofChain.connect(owner).setSessionDuration(10);
 
       await proofChain
             .connect(operators[0])
@@ -113,7 +113,7 @@ const {
               chainId,
               blockHeight
             )
-            ).to.emit(proofChain, 'QuorumNotReached')
+            ).to.emit(proofChain, 'BSPQuorumNotReached')
             .withArgs(chainId, blockHeight);
 
       await expect(
@@ -128,7 +128,7 @@ const {
     });
 
     it('Changes require audit to true when quorum was not reached, emits event and reverts if called again', async function() {
-      await proofChain.connect(owner).setBlockSpecimenSessionDuration(10);
+      await proofChain.connect(owner).setSessionDuration(10);
 
       for (i = 0; i < 3; i++) {
         await proofChain.connect(operators[i])
@@ -172,7 +172,7 @@ const {
       await mineBlocks(10)
 
       await expect(proofChain.connect(owner).finalizeAndRewardSpecimenSession( chainId, blockHeight))
-      .to.emit(proofChain, 'QuorumNotReached').withArgs(chainId, blockHeight);
+      .to.emit(proofChain, 'BSPQuorumNotReached').withArgs(chainId, blockHeight);
 
       await expect(proofChain.connect(owner).finalizeAndRewardSpecimenSession( chainId, blockHeight))
       .to.be.revertedWith('Session cannot be finalized');
@@ -202,7 +202,7 @@ const {
       await mineBlocks(10)
 
       await expect(proofChain.connect(owner).finalizeAndRewardSpecimenSession( chainId, 1))
-      .to.emit(proofChain, 'QuorumNotReached').withArgs(chainId, 1);
+      .to.emit(proofChain, 'BSPQuorumNotReached').withArgs(chainId, 1);
 
       await expect(proofChain.connect(owner).finalizeAndRewardSpecimenSession( chainId, 1))
       .to.be.revertedWith('Session cannot be finalized');
@@ -210,7 +210,7 @@ const {
 
     it('Emits specimen hash reward awarded event with the correct args when quorum is achieved', async function() {
       await proofChain.connect(owner).setQuorumThreshold(oneToken.div(2)); // 50%
-      await proofChain.connect(owner).setBlockSpecimenSessionDuration(11);
+      await proofChain.connect(owner).setSessionDuration(11);
 
       for (i = 0; i < 6; i++) {
         await proofChain
@@ -259,7 +259,7 @@ const {
 
     it('Emits specimen hash reward awarded event with the correct args when quorum is achieved', async function() {
     await proofChain.connect(owner).setQuorumThreshold(oneToken.div(2)); // 50%
-      await proofChain.connect(owner).setBlockSpecimenSessionDuration(11);
+      await proofChain.connect(owner).setSessionDuration(11);
 
       const stake = oneToken.mul(150)
       const totalStake = stake.mul(10)
@@ -308,7 +308,7 @@ const {
 
   it('Emits specimen hash reward awarded event with the correct args when quorum is achieved', async function() {
     await proofChain.connect(owner).setQuorumThreshold(oneToken.div(2)); // 50%
-      await proofChain.connect(owner).setBlockSpecimenSessionDuration(11);
+      await proofChain.connect(owner).setSessionDuration(11);
 
       const stake = oneToken.mul(150)
       const totalStake = stake.mul(10)

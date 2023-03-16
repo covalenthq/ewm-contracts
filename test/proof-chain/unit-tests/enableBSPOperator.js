@@ -99,12 +99,12 @@ const {
       validatorID = 0;
 
       await expect(proofChain.connect(validators[validatorID]).enableBSPOperator(validators[validatorID].address)
-        ).to.be.revertedWith('Operator is not BSP');
+        ).to.be.revertedWith('Operator does not perform the requested role');
 
     await proofChain.connect(owner).addAuditor(delegators[0].address)
 
     await expect(proofChain.connect(validators[0]).enableBSPOperator( delegators[0].address),
-        ).to.be.revertedWith('Operator is not BSP');
+        ).to.be.revertedWith('Operator does not perform the requested role');
 
       await proofChain.connect(owner).removeBSPOperator(operators[validatorID].address);
 
@@ -114,7 +114,7 @@ const {
               .enableBSPOperator(
                   operators[validatorID].address,
               ),
-      ).to.be.revertedWith('Operator is not BSP');
+      ).to.be.revertedWith('Operator does not perform the requested role');
     });
 
 

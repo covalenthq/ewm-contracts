@@ -13,6 +13,7 @@ const WHALE = '0x189B9cBd4AfF470aF2C0102f365FC1823d857965';
 
 const GOVERNANCE_ROLE = '0x71840dc4906352362b0cdaf79870196c8e42acafade72d5d5a6d59291253ceb1';
 const BLOCK_SPECIMEN_PRODUCER_ROLE = '0x98d0bb2de1c65f6d2cbc3401e3d5d5086bfe815cb57e521dafd0ebdbef6ee85c';
+const BLOCK_RESULT_PRODUCER_ROLE = '0x77ae3b5d012484be69eeed881350adb3189b651fac6e88b31ddff30c833a8b7f';
 const AUDITOR_ROLE = '0x59a1c48e5837ad7a7f3dcedcbe129bf3249ec4fbf651fd4f5e2600ead39fe2f5';
 
 const VALIDATOR_ADDRESSES = [
@@ -62,13 +63,6 @@ const TOKEN_HOLDERS_ADDRESSES = [
   '0x3bb9378a2a29279aa82c00131a6046aa0b5f6a79',
   '0xa1d8d972560c2f8144af871db508f0b0b10a3fbf',
 ];
-
-const getSigner = async (address) => {
-  await impersonate(address);
-  const signer = await ethers.getSigner(address)
-  await giveEth('1.0', [signer])
-  return signer
-};
 
 const impersonate = async (address) =>
   await hre.network.provider.request({
@@ -178,11 +172,6 @@ const deposit = async (contract, amount) => {
   await cqtContract.approve(contract.address, amount);
   return await contract.depositRewardTokens(amount);
 };
-
-const giveCQT = async (amount, recipientAddress, cqtContract) => {
-    const tokenHolder = await getSigner(TOKEN_HOLDERS_ADDRESSES[0])
-    return await cqtContract.connect(tokenHolder).transfer(recipientAddress, amount)
-}
 
 const stake = async (amount, signer, cqtContract, contract, id) => {
   await cqtContract.connect(signer).approve(contract.address, amount);
@@ -311,6 +300,20 @@ const setupDefaultOperators = async () => {
 
 const getHash = (str) => '0x' + createKeccakHash('keccak256').update(str).digest('hex');
 
+const getProofChainAddressOnCurrentNetwork = () => {
+  const networkName = hre.network.name;
+  return networkName == "moonbeamTestContracts" ? process.env.MOONBEAM_TEST_PROOFCHAIN_ADDRESS :
+    networkName == "moonbeamProdContracts" ? process.env.MOONBEAM_PROD_PROOFCHAIN_ADDRESS :
+      networkName == "cqt" ? process.env.CQT_PROOFCHAIN_ADDRESS : "0";
+};
+
+const getStakingAddressOnCurrentNetwork = () => {
+  const networkName = hre.network.name;
+  return networkName == "moonbeamTestContracts" ? process.env.MOONBEAM_TEST_STAKING_ADDRESS :
+    networkName == "moonbeamProdContracts" ? process.env.MOONBEAM_PROD_STAKING_ADDRESS :
+      networkName == "cqt" ? process.env.CQT_STAKING_ADDRESS : "0";
+};
+
 async function getProofChainContract(signer, address) {
   return new ethers.Contract(address, PROOFCHAIN_ABI, signer);
 }
@@ -319,53 +322,40 @@ async function getStakingContract(signer, address) {
   return new ethers.Contract(address, STAKING_ABI, signer);
 }
 
+async function getCQTContractFromAddress(signer, address) {
+  return new ethers.Contract(address, CQT_ABI, signer);
+}
+
+async function getProofChainContractOnCurrentNetwork(signer) {
+  let address = getProofChainAddressOnCurrentNetwork();
+  return getProofChainContract(signer, address);
+}
+
+async function getStakingContractOnCurrentNetwork(signer) {
+  let address = getStakingAddressOnCurrentNetwork();
+  return getStakingContract(signer, address);
+}
+
 async function getCQTContract(signer, address) {
   return new ethers.Contract(address, CQT_ABI, signer);
 }
 
-async function getCQTFaucetContract(deployer) {
-  const NAME = 'CovalentQueryTokenFaucet';
-  const SYMBOL = 'CQT';
-  const MAX_SUPPLY = BigInt(1000000000000000000000000000);
+const getCQTAddressOnCurrentNetwork = () => {
+  const networkName = hre.network.name;
+  return networkName == "moonbeamTestContracts" ? process.env.MOONBEAM_CQT_ADDRESS :
+    networkName == "moonbeamProdContracts" ? process.env.MOONBEAM_CQT_ADDRESS :
+      networkName == "cqt" ? process.env.CQT_CQT_ADDRESS : "0";
+};
 
-  console.log('Deploying CQT Faucet with the account:', deployer.address);
-
-  const CQTFaucet = await hre.ethers.getContractFactory('CovalentQueryTokenFaucet', deployer);
-  const cqtFaucet = await CQTFaucet.deploy(NAME, SYMBOL, MAX_SUPPLY);
-  await cqtFaucet.deployed();
-  return cqtFaucet;
+async function getCQTContractOnCurrentNetwork(signer) {
+  let address = getCQTAddressOnCurrentNetwork();
+  return getCQTContract(signer, address);
 }
 
 async function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
-const zero = () => ethers.BigNumber.from(0);
-
-async function getDelegatorBalances(stakingContract, delegatorAddress) {
-
-  const validatorN = (await stakingContract.getMetadata())._validatorsN;
-  let sum = zero();
-  let unstaked = zero();
-  let rewards = zero();
-  let staked = zero();
-  for (var i = 0; i < validatorN; i++) {
-    const delegatorData = await stakingContract.getDelegatorMetadata(delegatorAddress, i);
-    for (var k = 0; k < delegatorData.unstakingAmounts.length; k++) {
-      sum = sum.add(delegatorData.unstakingAmounts[k]);
-      unstaked = unstakedRedeemable.add(delegatorData.unstakingAmounts[k]);
-    }
-    sum = sum.add(delegatorData.staked);
-    sum = sum.add(delegatorData.rewards);
-    sum = sum.add(delegatorData.commissionEarned);
-    staked = staked.add(delegatorData.staked)
-    rewards = rewards.add(delegatorData.rewards);
-  }
-  let row = [sum, rewards, unstaked];
-  row = row.map(val => val.div(oneToken).toString());
-  row = [delegatorAddress].concat(row);
-  return {sum: sum, staked:staked, rewards:rewards, unstaked: unstaked}
 }
 
 
@@ -386,7 +376,6 @@ exports.getDelegatorCoolDown = getDelegatorCoolDown;
 exports.deployStakingWithDefaultParams = deployStakingWithDefaultParams;
 exports.deployStaking = deployStaking;
 exports.impersonateAll = impersonateAll;
-exports.impersonate = impersonate;
 exports.addEnabledValidator = addEnabledValidator;
 exports.getAllWithProofchain = getAllWithProofchain;
 exports.setupWithDefaultParameters = setupWithDefaultParameters;
@@ -396,12 +385,14 @@ exports.giveEth = giveEth;
 exports.getHash = getHash;
 exports.getProofChainContract = getProofChainContract;
 exports.getStakingContract = getStakingContract;
+exports.getCQTContractFromAddress = getCQTContractFromAddress;
+exports.getProofChainAddressOnCurrentNetwork = getProofChainAddressOnCurrentNetwork;
+exports.getStakingAddressOnCurrentNetwork = getStakingAddressOnCurrentNetwork;
+exports.getProofChainContractOnCurrentNetwork = getProofChainContractOnCurrentNetwork;
+exports.getStakingContractOnCurrentNetwork = getStakingContractOnCurrentNetwork;
+exports.getCQTContractOnCurrentNetwork = getCQTContractOnCurrentNetwork;
+exports.getCQTAddressOnCurrentNetwork = getCQTAddressOnCurrentNetwork;
 exports.sleep = sleep;
-exports.getCQTFaucetContract = getCQTFaucetContract;
-exports.getSigner = getSigner;
-exports.giveCQT = giveCQT;
-exports.zero = zero;
-exports.getDelegatorBalances = getDelegatorBalances;
 
 exports.oneToken = oneToken;
 exports.OWNER = OWNER;
@@ -420,3 +411,4 @@ exports.CQT_ETH_MAINNET = ETHEREUM_CQT_ADDRESS;
 exports.GOVERNANCE_ROLE = GOVERNANCE_ROLE;
 exports.AUDITOR_ROLE = AUDITOR_ROLE;
 exports.BLOCK_SPECIMEN_PRODUCER_ROLE = BLOCK_SPECIMEN_PRODUCER_ROLE;
+exports.BLOCK_RESULT_PRODUCER_ROLE = BLOCK_RESULT_PRODUCER_ROLE;
