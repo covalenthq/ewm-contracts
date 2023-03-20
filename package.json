@@ -11,7 +11,7 @@
         "dotenv": "^16.0.3",
         "eslint": "^8.39.0",
         "eslint-config-google": "^0.14.0",
-        "eslint-config-prettier": "^8.7.0",
+        "eslint-config-prettier": "^8.8.0",
         "ethereum-waffle": "^4.0.10",
         "ethers": "^5.7.1",
         "hardhat": "^2.13.0",
