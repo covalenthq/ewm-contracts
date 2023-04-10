@@ -14,7 +14,7 @@
         "eslint-config-prettier": "^8.7.0",
         "ethereum-waffle": "^4.0.10",
         "ethers": "^5.7.1",
-        "hardhat": "^2.13.0",
+        "hardhat": "^2.13.1",
         "hardhat-contract-sizer": "^2.8.0",
         "hardhat-gas-reporter": "^1.0.9",
         "solhint-ci": "^4.0.2",
