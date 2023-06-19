@@ -21,7 +21,7 @@
         "solidity-coverage": "^0.8.2"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "^4.8.2",
+        "@openzeppelin/contracts": "^4.9.2",
         "@openzeppelin/contracts-upgradeable": "^4.8.2",
         "hardhat-abi-exporter": "^2.10.1",
         "prettier": "^2.8.8",
