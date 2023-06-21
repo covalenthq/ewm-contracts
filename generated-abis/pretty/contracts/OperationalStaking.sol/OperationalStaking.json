@@ -2,6 +2,7 @@
   "event AllocatedTokensTaken(uint128)",
   "event CommissionRewardRedeemed(uint128 indexed,address indexed,uint128)",
   "event Initialized(address,uint128,uint128,uint128,uint128)",
+  "event Initialized(uint8)",
   "event MaxCapMultiplierChanged(uint128)",
   "event OwnershipTransferred(address indexed,address indexed)",
   "event RecoveredUnstake(uint128 indexed,address indexed,uint128,uint128)",

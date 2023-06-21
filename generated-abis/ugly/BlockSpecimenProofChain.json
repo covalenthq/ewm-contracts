@@ -722,6 +722,25 @@
   {
     "inputs": [
       {
+        "internalType": "bytes32",
+        "name": "specimenhash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getURLS",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "",
+        "type": "string[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "initialOwner",
         "type": "address"
@@ -746,6 +765,35 @@
       }
     ],
     "name": "isEnabled",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint64",
+        "name": "chainId",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "blockHeight",
+        "type": "uint64"
+      },
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "isSessionOpen",
     "outputs": [
       {
         "internalType": "bool",

@@ -36,13 +36,13 @@
       {
         "indexed": false,
         "internalType": "bytes32",
-        "name": "blockHash",
+        "name": "blockSpecimenHash",
         "type": "bytes32"
       },
       {
         "indexed": false,
         "internalType": "bytes32",
-        "name": "specimenHash",
+        "name": "resultHash",
         "type": "bytes32"
       },
       {
@@ -58,7 +58,7 @@
         "type": "uint128"
       }
     ],
-    "name": "BlockSpecimenProductionProofSubmitted",
+    "name": "BlockResultProductionProofSubmitted",
     "type": "event"
   },
   {
@@ -79,17 +79,17 @@
       {
         "indexed": true,
         "internalType": "bytes32",
-        "name": "blockhash",
+        "name": "blockSpecimenHash",
         "type": "bytes32"
       },
       {
         "indexed": false,
         "internalType": "bytes32",
-        "name": "specimenhash",
+        "name": "resulthash",
         "type": "bytes32"
       }
     ],
-    "name": "BlockSpecimenRewardAwarded",
+    "name": "BlockResultRewardAwarded",
     "type": "event"
   },
   {
@@ -98,11 +98,11 @@
       {
         "indexed": false,
         "internalType": "uint128",
-        "name": "newBlockSpecimenRewardAllocation",
+        "name": "newBlockResultRewardAllocation",
         "type": "uint128"
       }
     ],
-    "name": "BlockSpecimenRewardChanged",
+    "name": "BlockResultRewardChanged",
     "type": "event"
   },
   {
@@ -300,6 +300,45 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "newSessionDuration",
+        "type": "uint64"
+      }
+    ],
+    "name": "ResultSessionDurationChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "minSubmissions",
+        "type": "uint64"
+      }
+    ],
+    "name": "ResultSessionMinSubmissionChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newQuorumThreshold",
+        "type": "uint256"
+      }
+    ],
+    "name": "ResultSessionQuorumChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "uint64",
         "name": "secondsPerBlock",
@@ -339,45 +378,6 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "uint64",
-        "name": "newSessionDuration",
-        "type": "uint64"
-      }
-    ],
-    "name": "SpecimenSessionDurationChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint64",
-        "name": "minSubmissions",
-        "type": "uint64"
-      }
-    ],
-    "name": "SpecimenSessionMinSubmissionChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newQuorumThreshold",
-        "type": "uint256"
-      }
-    ],
-    "name": "SpecimenSessionQuorumChanged",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
         "internalType": "address",
         "name": "newInterfaceAddress",
         "type": "address"
@@ -401,7 +401,7 @@
   },
   {
     "inputs": [],
-    "name": "BLOCK_SPECIMEN_PRODUCER_ROLE",
+    "name": "BLOCK_RESULT_PRODUCER_ROLE",
     "outputs": [
       {
         "internalType": "bytes32",
@@ -451,7 +451,7 @@
         "type": "uint128"
       }
     ],
-    "name": "addBSPOperator",
+    "name": "addBRPOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -501,16 +501,16 @@
       },
       {
         "internalType": "bytes32",
-        "name": "blockHash",
+        "name": "blockSpecimenHash",
         "type": "bytes32"
       },
       {
         "internalType": "bytes32",
-        "name": "definitiveSpecimenHash",
+        "name": "definitiveResultHash",
         "type": "bytes32"
       }
     ],
-    "name": "arbitrateBlockSpecimenSession",
+    "name": "arbitrateBlockResultSession",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -523,7 +523,7 @@
         "type": "address"
       }
     ],
-    "name": "disableBSPOperator",
+    "name": "disableBRPOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -554,7 +554,7 @@
         "type": "address"
       }
     ],
-    "name": "enableBSPOperator",
+    "name": "enableBRPOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -572,7 +572,7 @@
         "type": "uint64"
       }
     ],
-    "name": "finalizeAndRewardSpecimenSession",
+    "name": "finalizeAndRewardResultSession",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -583,7 +583,7 @@
     "outputs": [
       {
         "internalType": "address[]",
-        "name": "_bsps",
+        "name": "_brps",
         "type": "address[]"
       },
       {
@@ -602,7 +602,7 @@
   },
   {
     "inputs": [],
-    "name": "getBSPRoleData",
+    "name": "getBRPRoleData",
     "outputs": [
       {
         "internalType": "uint128",
@@ -673,12 +673,12 @@
       },
       {
         "internalType": "uint128",
-        "name": "blockSpecimenRewardAllocation",
+        "name": "blockResultRewardAllocation",
         "type": "uint128"
       },
       {
         "internalType": "uint64",
-        "name": "blockSpecimenSessionDuration",
+        "name": "blockResultSessionDuration",
         "type": "uint64"
       },
       {
@@ -688,7 +688,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "blockSpecimenQuorum",
+        "name": "blockResultQuorum",
         "type": "uint256"
       },
       {
@@ -722,6 +722,25 @@
   {
     "inputs": [
       {
+        "internalType": "bytes32",
+        "name": "resulthash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getURLS",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "",
+        "type": "string[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "initialOwner",
         "type": "address"
@@ -746,6 +765,35 @@
       }
     ],
     "name": "isEnabled",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint64",
+        "name": "chainId",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "blockHeight",
+        "type": "uint64"
+      },
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "isSessionOpen",
     "outputs": [
       {
         "internalType": "bool",
@@ -809,7 +857,7 @@
         "type": "address"
       }
     ],
-    "name": "removeBSPOperator",
+    "name": "removeBRPOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -842,7 +890,7 @@
         "type": "uint128"
       }
     ],
-    "name": "setBSPRequiredStake",
+    "name": "setBRPRequiredStake",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -869,11 +917,11 @@
     "inputs": [
       {
         "internalType": "uint128",
-        "name": "newBlockSpecimenReward",
+        "name": "newBlockResultReward",
         "type": "uint128"
       }
     ],
-    "name": "setBlockSpecimenReward",
+    "name": "setBlockResultReward",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -886,7 +934,7 @@
         "type": "uint64"
       }
     ],
-    "name": "setBlockSpecimenSessionDuration",
+    "name": "setBlockResultSessionDuration",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1021,12 +1069,12 @@
       },
       {
         "internalType": "bytes32",
-        "name": "blockHash",
+        "name": "blockSpecimenHash",
         "type": "bytes32"
       },
       {
         "internalType": "bytes32",
-        "name": "specimenHash",
+        "name": "resultHash",
         "type": "bytes32"
       },
       {
@@ -1035,7 +1083,7 @@
         "type": "string"
       }
     ],
-    "name": "submitBlockSpecimenProof",
+    "name": "submitBlockResultProof",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
