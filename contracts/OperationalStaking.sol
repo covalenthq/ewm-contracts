@@ -262,110 +262,110 @@ contract OperationalStaking is OwnableUpgradeable {
         return uint128((uint256(amount) * DIVIDER) / uint256(rate));
     }
 
-    /*
-     * Delegates tokens under the provided validator
-     */
-    function stake(uint128 validatorId, uint128 amount) external {
-        _stake(validatorId, amount, true);
-    }
+    // /*
+    //  * Delegates tokens under the provided validator
+    //  */
+    // function stake(uint128 validatorId, uint128 amount) external {
+    //     _stake(validatorId, amount, true);
+    // }
 
-    /*
-     * withTransfer is set to false when delegators recover unstaked or redelegated tokens.
-     * These tokens are already in the contract.
-     */
-    function _stake(uint128 validatorId, uint128 amount, bool withTransfer) internal validValidatorId(validatorId) {
-        require(amount >= REWARD_REDEEM_THRESHOLD, "Stake amount is too small");
-        Validator storage v = _validators[validatorId];
-        bool isValidator = msg.sender == v._address;
+    // /*
+    //  * withTransfer is set to false when delegators recover unstaked or redelegated tokens.
+    //  * These tokens are already in the contract.
+    //  */
+    // function _stake(uint128 validatorId, uint128 amount, bool withTransfer) internal validValidatorId(validatorId) {
+    //     require(amount >= REWARD_REDEEM_THRESHOLD, "Stake amount is too small");
+    //     Validator storage v = _validators[validatorId];
+    //     bool isValidator = msg.sender == v._address;
 
-        // validators should be able to stake if they are disabled.
-        if (!isValidator) require(v.disabledAtBlock == 0, "Validator is disabled");
+    //     // validators should be able to stake if they are disabled.
+    //     if (!isValidator) require(v.disabledAtBlock == 0, "Validator is disabled");
 
-        uint128 sharesAdd = _tokensToShares(amount, v.exchangeRate);
-        Staking storage s = v.stakings[msg.sender];
+    //     uint128 sharesAdd = _tokensToShares(amount, v.exchangeRate);
+    //     Staking storage s = v.stakings[msg.sender];
 
-        if (isValidator) {
-            // the compounded rewards are not included in max stake check
-            // hence we use s.staked instead of s.shares for valueStaked calculation
-            uint128 valueStaked = s.staked + amount;
-            require(valueStaked <= validatorMaxStake, "Validator max stake exceeded");
-        } else {
-            // cannot stake more than validator delegation max cap
-            uint128 delegationMaxCap = v.stakings[v._address].staked * maxCapMultiplier;
-            uint128 newDelegated = v.delegated + amount;
-            require(newDelegated <= delegationMaxCap, "Validator max delegation exceeded");
-            v.delegated = newDelegated;
-        }
+    //     if (isValidator) {
+    //         // the compounded rewards are not included in max stake check
+    //         // hence we use s.staked instead of s.shares for valueStaked calculation
+    //         uint128 valueStaked = s.staked + amount;
+    //         require(valueStaked <= validatorMaxStake, "Validator max stake exceeded");
+    //     } else {
+    //         // cannot stake more than validator delegation max cap
+    //         uint128 delegationMaxCap = v.stakings[v._address].staked * maxCapMultiplier;
+    //         uint128 newDelegated = v.delegated + amount;
+    //         require(newDelegated <= delegationMaxCap, "Validator max delegation exceeded");
+    //         v.delegated = newDelegated;
+    //     }
 
-        // "buy/mint" shares
-        v.totalShares += sharesAdd;
-        s.shares += sharesAdd;
+    //     // "buy/mint" shares
+    //     v.totalShares += sharesAdd;
+    //     s.shares += sharesAdd;
 
-        // keep track of staked tokens
-        s.staked += amount;
-        if (withTransfer) _transferToContract(msg.sender, amount);
-        emit Staked(validatorId, msg.sender, amount);
-    }
+    //     // keep track of staked tokens
+    //     s.staked += amount;
+    //     if (withTransfer) _transferToContract(msg.sender, amount);
+    //     emit Staked(validatorId, msg.sender, amount);
+    // }
 
-    /*
-     * Undelegates tokens from the provided validator
-     */
-    function unstake(uint128 validatorId, uint128 amount) external validValidatorId(validatorId) {
-        require(amount >= REWARD_REDEEM_THRESHOLD, "Unstake amount is too small");
-        Validator storage v = _validators[validatorId];
-        Staking storage s = v.stakings[msg.sender];
-        require(s.staked >= amount, "Staked < amount provided");
+    // /*
+    //  * Undelegates tokens from the provided validator
+    //  */
+    // function unstake(uint128 validatorId, uint128 amount) external validValidatorId(validatorId) {
+    //     require(amount >= REWARD_REDEEM_THRESHOLD, "Unstake amount is too small");
+    //     Validator storage v = _validators[validatorId];
+    //     Staking storage s = v.stakings[msg.sender];
+    //     require(s.staked >= amount, "Staked < amount provided");
 
-        bool isValidator = msg.sender == v._address;
-        if (isValidator && v.disabledAtBlock == 0) {
-            // validators will have to disable themselves if they want to unstake tokens below delegation max cap
-            uint128 newValidatorMaxCap = (s.staked - amount) * maxCapMultiplier;
-            require(v.delegated <= newValidatorMaxCap, "Cannot unstake beyond max cap");
-        }
-        if (!isValidator) {
-            v.delegated -= amount;
-        }
+    //     bool isValidator = msg.sender == v._address;
+    //     if (isValidator && v.disabledAtBlock == 0) {
+    //         // validators will have to disable themselves if they want to unstake tokens below delegation max cap
+    //         uint128 newValidatorMaxCap = (s.staked - amount) * maxCapMultiplier;
+    //         require(v.delegated <= newValidatorMaxCap, "Cannot unstake beyond max cap");
+    //     }
+    //     if (!isValidator) {
+    //         v.delegated -= amount;
+    //     }
 
-        uint128 sharesRemove = _tokensToShares(amount, v.exchangeRate);
-        // "sell/burn" shares
-        // sometimes due to conversion inconsistencies shares to remove might end up being bigger than shares stored
-        // so we have to reassign it to allow the full unstake
-        if (sharesRemove > s.shares) sharesRemove = s.shares;
+    //     uint128 sharesRemove = _tokensToShares(amount, v.exchangeRate);
+    //     // "sell/burn" shares
+    //     // sometimes due to conversion inconsistencies shares to remove might end up being bigger than shares stored
+    //     // so we have to reassign it to allow the full unstake
+    //     if (sharesRemove > s.shares) sharesRemove = s.shares;
 
-        unchecked {
-            s.shares -= sharesRemove;
-        }
-        v.totalShares -= sharesRemove;
+    //     unchecked {
+    //         s.shares -= sharesRemove;
+    //     }
+    //     v.totalShares -= sharesRemove;
 
-        // remove staked tokens
-        unchecked {
-            s.staked -= amount;
-        }
-        // create unstaking instance
-        uint128 coolDownEnd = uint128(v.disabledAtBlock != 0 ? v.disabledAtBlock : block.number);
-        unchecked {
-            coolDownEnd += (isValidator ? validatorCoolDown : delegatorCoolDown);
-        }
-        uint128 unstakeId = uint128(v.unstakings[msg.sender].length);
-        v.unstakings[msg.sender].push(Unstaking(coolDownEnd, amount));
-        emit Unstaked(validatorId, msg.sender, amount, unstakeId);
-    }
+    //     // remove staked tokens
+    //     unchecked {
+    //         s.staked -= amount;
+    //     }
+    //     // create unstaking instance
+    //     uint128 coolDownEnd = uint128(v.disabledAtBlock != 0 ? v.disabledAtBlock : block.number);
+    //     unchecked {
+    //         coolDownEnd += (isValidator ? validatorCoolDown : delegatorCoolDown);
+    //     }
+    //     uint128 unstakeId = uint128(v.unstakings[msg.sender].length);
+    //     v.unstakings[msg.sender].push(Unstaking(coolDownEnd, amount));
+    //     emit Unstaked(validatorId, msg.sender, amount, unstakeId);
+    // }
 
-    /*
-     * Restakes unstaked tokens
-     */
-    function recoverUnstaking(uint128 amount, uint128 validatorId, uint128 unstakingId) external validValidatorId(validatorId) {
-        require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
-        Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
-        require(us.amount >= amount, "Unstaking has less tokens");
-        unchecked {
-            us.amount -= amount;
-        }
-        // set cool down end to 0 to release gas if new unstaking amount is 0
-        if (us.amount == 0) us.coolDownEnd = 0;
-        emit RecoveredUnstake(validatorId, msg.sender, amount, unstakingId);
-        _stake(validatorId, amount, false);
-    }
+    // /*
+    //  * Restakes unstaked tokens
+    //  */
+    // function recoverUnstaking(uint128 amount, uint128 validatorId, uint128 unstakingId) external validValidatorId(validatorId) {
+    //     require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
+    //     Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
+    //     require(us.amount >= amount, "Unstaking has less tokens");
+    //     unchecked {
+    //         us.amount -= amount;
+    //     }
+    //     // set cool down end to 0 to release gas if new unstaking amount is 0
+    //     if (us.amount == 0) us.coolDownEnd = 0;
+    //     emit RecoveredUnstake(validatorId, msg.sender, amount, unstakingId);
+    //     _stake(validatorId, amount, false);
+    // }
 
     /*
      * Transfers out unlocked unstaked tokens back to the delegator
@@ -455,31 +455,31 @@ contract OperationalStaking is OwnableUpgradeable {
     //     redeemCommission(validatorId, beneficiary, _validators[validatorId].commissionAvailableToRedeem);
     // }
 
-    /*
-     * Redelegates tokens to another validator if a validator got disabled.
-     * First the tokens need to be unstaked
-     */
-    function redelegateUnstaked(
-        uint128 amount,
-        uint128 oldValidatorId,
-        uint128 newValidatorId,
-        uint128 unstakingId
-    ) external validValidatorId(oldValidatorId) validValidatorId(newValidatorId) {
-        Validator storage v = _validators[oldValidatorId];
-        require(v.disabledAtBlock != 0, "Validator is not disabled");
-        require(v._address != msg.sender, "Validator cannot redelegate");
-        require(v.unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
-        Unstaking storage us = v.unstakings[msg.sender][unstakingId];
-        require(us.amount >= amount, "Unstaking has less tokens");
-        // stake tokens back to the contract using new validator, set withTransfer to false since the tokens are already in the contract
-        unchecked {
-            us.amount -= amount;
-        }
-        // set cool down end to 0 to release gas if new unstaking amount is 0
-        if (us.amount == 0) us.coolDownEnd = 0;
-        emit Redelegated(oldValidatorId, newValidatorId, msg.sender, amount, unstakingId);
-        _stake(newValidatorId, amount, false);
-    }
+    // /*
+    //  * Redelegates tokens to another validator if a validator got disabled.
+    //  * First the tokens need to be unstaked
+    //  */
+    // function redelegateUnstaked(
+    //     uint128 amount,
+    //     uint128 oldValidatorId,
+    //     uint128 newValidatorId,
+    //     uint128 unstakingId
+    // ) external validValidatorId(oldValidatorId) validValidatorId(newValidatorId) {
+    //     Validator storage v = _validators[oldValidatorId];
+    //     require(v.disabledAtBlock != 0, "Validator is not disabled");
+    //     require(v._address != msg.sender, "Validator cannot redelegate");
+    //     require(v.unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
+    //     Unstaking storage us = v.unstakings[msg.sender][unstakingId];
+    //     require(us.amount >= amount, "Unstaking has less tokens");
+    //     // stake tokens back to the contract using new validator, set withTransfer to false since the tokens are already in the contract
+    //     unchecked {
+    //         us.amount -= amount;
+    //     }
+    //     // set cool down end to 0 to release gas if new unstaking amount is 0
+    //     if (us.amount == 0) us.coolDownEnd = 0;
+    //     emit Redelegated(oldValidatorId, newValidatorId, msg.sender, amount, unstakingId);
+    //     _stake(newValidatorId, amount, false);
+    // }
 
     /*
      * Changes the validator staking address, this will transfer validator staking data and optionally unstakings
