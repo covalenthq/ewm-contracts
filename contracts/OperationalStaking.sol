@@ -384,20 +384,20 @@ contract OperationalStaking is OwnableUpgradeable {
         _transferFromContract(msg.sender, amount);
     }
 
-    /*
-     * Redeems all available rewards
-     */
-    function redeemAllRewards(uint128 validatorId, address beneficiary) external {
-        _redeemRewards(validatorId, beneficiary, 0); // pass 0 to request full amount
-    }
+    // /*
+    //  * Redeems all available rewards
+    //  */
+    // function redeemAllRewards(uint128 validatorId, address beneficiary) external {
+    //     _redeemRewards(validatorId, beneficiary, 0); // pass 0 to request full amount
+    // }
 
-    /*
-     * Redeems partial rewards
-     */
-    function redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) external {
-        require(amount > 0, "Amount is 0");
-        _redeemRewards(validatorId, beneficiary, amount);
-    }
+    // /*
+    //  * Redeems partial rewards
+    //  */
+    // function redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) external {
+    //     require(amount > 0, "Amount is 0");
+    //     _redeemRewards(validatorId, beneficiary, amount);
+    // }
 
     function _redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) internal validValidatorId(validatorId) {
         require(beneficiary != address(0x0), "Invalid beneficiary");
@@ -435,25 +435,25 @@ contract OperationalStaking is OwnableUpgradeable {
         _transferFromContract(beneficiary, amountToRedeem);
     }
 
-    function redeemCommission(uint128 validatorId, address beneficiary, uint128 amount) public validValidatorId(validatorId) {
-        require(beneficiary != address(0x0), "Invalid beneficiary");
-        Validator storage v = _validators[validatorId];
-        require(v._address == msg.sender, "The sender is not the validator");
+    // function redeemCommission(uint128 validatorId, address beneficiary, uint128 amount) public validValidatorId(validatorId) {
+    //     require(beneficiary != address(0x0), "Invalid beneficiary");
+    //     Validator storage v = _validators[validatorId];
+    //     require(v._address == msg.sender, "The sender is not the validator");
 
-        require(v.commissionAvailableToRedeem > 0, "No commission available to redeem");
-        require(amount > 0, "The requested amount is 0");
-        require(amount <= v.commissionAvailableToRedeem, "Requested amount is higher than commission available to redeem");
-        unchecked {
-            v.commissionAvailableToRedeem -= amount;
-        }
+    //     require(v.commissionAvailableToRedeem > 0, "No commission available to redeem");
+    //     require(amount > 0, "The requested amount is 0");
+    //     require(amount <= v.commissionAvailableToRedeem, "Requested amount is higher than commission available to redeem");
+    //     unchecked {
+    //         v.commissionAvailableToRedeem -= amount;
+    //     }
 
-        _transferFromContract(beneficiary, amount);
-        emit CommissionRewardRedeemed(validatorId, beneficiary, amount);
-    }
+    //     _transferFromContract(beneficiary, amount);
+    //     emit CommissionRewardRedeemed(validatorId, beneficiary, amount);
+    // }
 
-    function redeemAllCommission(uint128 validatorId, address beneficiary) external {
-        redeemCommission(validatorId, beneficiary, _validators[validatorId].commissionAvailableToRedeem);
-    }
+    // function redeemAllCommission(uint128 validatorId, address beneficiary) external {
+    //     redeemCommission(validatorId, beneficiary, _validators[validatorId].commissionAvailableToRedeem);
+    // }
 
     /*
      * Redelegates tokens to another validator if a validator got disabled.
