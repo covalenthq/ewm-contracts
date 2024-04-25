@@ -7,8 +7,12 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 contract OperationalStaking is OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    uint256 public constant CURRENT_MIGRATION_STEPPING = 3; // bump this number to force contract to pause until migrations are run
+
     uint256 public constant DIVIDER = 10 ** 18; // 18 decimals used for scaling rates
     uint128 public constant REWARD_REDEEM_THRESHOLD = 10 ** 8; // minimum number of tokens that can be redeemed
+    uint128 public constant DEFAULT_VALIDATOR_ENABLE_MIN_STAKE = 35000 * 10 ** 18; // minimum number of self-staked tokens for a validator to become / stay enabled
+    uint128 public constant DEFAULT_DELEGATOR_MIN_STAKE = 10 ** 18; // stake/unstake operations are invalid if they put you below this threshold (except unstaking to 0)
 
     IERC20Upgradeable public CQT;
     uint128 public rewardPool; // how many tokens are allocated for rewards
@@ -19,6 +23,13 @@ contract OperationalStaking is OwnableUpgradeable {
     address public stakingManager;
     uint128 public validatorsN; // number of validators, used to get validator ids
     mapping(uint128 => Validator) internal _validators; // id -> validator instance
+
+    uint128 public validatorEnableMinStake; // minimum number of self-staked tokens for a validator to become / stay enabled
+    uint128 public delegatorMinStake; // stake/unstake operations are invalid if they put you below this threshold (except unstaking to 0)
+
+    uint256 private _migrationStepping;
+    bool private _unpaused;
+    bool private _migrating;
 
     struct Staking {
         uint128 shares; // # of validator shares that the delegator owns
@@ -40,9 +51,18 @@ contract OperationalStaking is OwnableUpgradeable {
         uint256 disabledAtBlock;
         mapping(address => Staking) stakings;
         mapping(address => Unstaking[]) unstakings;
+        bool frozen;
     }
 
-    event Initialized(address cqt, uint128 validatorCoolDown, uint128 delegatorCoolDown, uint128 maxCapMultiplier, uint128 validatorMaxStake);
+    event InitializedSemantics(
+        address cqt,
+        uint128 validatorCoolDown,
+        uint128 delegatorCoolDown,
+        uint128 maxCapMultiplier,
+        uint128 validatorMaxStake,
+        uint128 validatorEnableMinStake,
+        uint128 delegatorMinStake
+    );
 
     event RewardTokensDeposited(uint128 amount);
 
@@ -62,6 +82,10 @@ contract OperationalStaking is OwnableUpgradeable {
 
     event RewardFailedDueZeroStake(uint128 indexed validatorId, uint128 amount);
 
+    event RewardFailedDueValidatorDisabled(uint128 indexed validatorId, uint128 amount);
+
+    event RewardFailedDueValidatorFrozen(uint128 indexed validatorId, uint128 amount);
+
     event RewardRedeemed(uint128 indexed validatorId, address indexed beneficiary, uint128 amount);
 
     event CommissionRewardRedeemed(uint128 indexed validatorId, address indexed beneficiary, uint128 amount);
@@ -71,6 +95,14 @@ contract OperationalStaking is OwnableUpgradeable {
     event ValidatorCommissionRateChanged(uint128 indexed validatorId, uint128 amount);
 
     event ValidatorMaxCapChanged(uint128 amount);
+
+    event ValidatorEnableMinStakeChanged(uint128 amount);
+
+    event DelegatorMinStakeChanged(uint128 amount);
+
+    event ValidatorUnstakeCooldownChanged(uint128 amount);
+
+    event DelegatorUnstakeCooldownChanged(uint128 amount);
 
     event ValidatorDisabled(uint128 indexed validatorId, uint256 blockNumber);
 
@@ -82,13 +114,26 @@ contract OperationalStaking is OwnableUpgradeable {
 
     event ValidatorAddressChanged(uint128 indexed validatorId, address indexed newAddress);
 
+    event Paused(address account);
+
+    event Unpaused(address account);
+
+    event ValidatorFrozen(uint128 indexed validatorId, string reason);
+
+    event ValidatorUnfrozen(uint128 indexed validatorId);
+
     modifier onlyStakingManager() {
         require(stakingManager == msg.sender, "Caller is not stakingManager");
         _;
     }
 
-    modifier validValidatorId(uint128 validatorId) {
-        require(validatorId < validatorsN, "Invalid validator");
+    modifier onlyStakingManagerOrOwner() {
+        require(msg.sender == stakingManager || msg.sender == owner(), "Caller is not stakingManager or owner");
+        _;
+    }
+
+    modifier whenNotPaused() {
+        require(_unpaused, "paused");
         _;
     }
 
@@ -98,8 +143,15 @@ contract OperationalStaking is OwnableUpgradeable {
         delegatorCoolDown = dCoolDown; //  28*6857 = ~ 28 days
         maxCapMultiplier = maxCapM;
         validatorMaxStake = vMaxStake;
+
+        validatorEnableMinStake = DEFAULT_VALIDATOR_ENABLE_MIN_STAKE;
+        delegatorMinStake = DEFAULT_DELEGATOR_MIN_STAKE;
+
+        _unpaused = true;
+        _migrationStepping = 0;
+
         CQT = IERC20Upgradeable(cqt);
-        emit Initialized(cqt, vCoolDown, dCoolDown, maxCapM, vMaxStake);
+        emit InitializedSemantics(cqt, vCoolDown, dCoolDown, maxCapM, vMaxStake, validatorEnableMinStake, delegatorMinStake);
     }
 
     function setStakingManagerAddress(address newAddress) external onlyOwner {
@@ -152,9 +204,45 @@ contract OperationalStaking is OwnableUpgradeable {
     }
 
     /*
+     * Updates minimum number of tokens that a validator must self-stake before enabling
+     */
+    function setValidatorEnableMinStake(uint128 minStake) public onlyOwner {
+        require(minStake <= validatorMaxStake, "minStake cannot be greater than validatorMaxStake");
+        validatorEnableMinStake = minStake;
+        emit ValidatorEnableMinStakeChanged(minStake);
+    }
+
+    /*
+     * Updates minimum valid position threshold for per-delegator stake
+     */
+    function setDelegatorMinStake(uint128 minStake) public onlyOwner {
+        require(minStake <= validatorMaxStake, "minStake cannot be greater than validatorMaxStake");
+        delegatorMinStake = minStake;
+        emit DelegatorMinStakeChanged(minStake);
+    }
+
+    /*
+     * Updates the validator cool down period (in blocks)
+     * Note: this doesn't effect the existing unstakes
+     */
+    function setValidatorCoolDown(uint128 coolDown) external onlyOwner {
+        validatorCoolDown = coolDown;
+        emit ValidatorUnstakeCooldownChanged(coolDown);
+    }
+
+    /*
+     * Updates the delegator cool down period (in blocks)
+     * Note: this doesn't effect the existing unstakes
+     */
+    function setDelegatorCoolDown(uint128 coolDown) external onlyOwner {
+        delegatorCoolDown = coolDown;
+        emit DelegatorUnstakeCooldownChanged(coolDown);
+    }
+
+    /*
      * Adds new validator instance
      */
-    function addValidator(address validator, uint128 commissionRate) external onlyStakingManager returns (uint256 id) {
+    function addValidator(address validator, uint128 commissionRate) external onlyStakingManager whenNotPaused returns (uint256 id) {
         require(commissionRate < DIVIDER, "Rate must be less than 100%");
         require(validator != address(0), "Validator address is 0");
         Validator storage v = _validators[validatorsN]; // use current number of validators for the id of a new validator instance
@@ -174,7 +262,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Reward emission
      */
-    function rewardValidators(uint128[] calldata ids, uint128[] calldata amounts) external onlyStakingManager {
+    function rewardValidators(uint128[] calldata ids, uint128[] calldata amounts) external onlyStakingManager whenNotPaused {
         require(ids.length == amounts.length, "Given ids and amounts arrays must be of the same length");
         uint128 newRewardPool = rewardPool;
         uint128 amount;
@@ -184,33 +272,59 @@ contract OperationalStaking is OwnableUpgradeable {
         for (uint256 j = 0; j < ids.length; j++) {
             amount = amounts[j];
             validatorId = ids[j];
+
             // make sure there are enough tokens in the reward pool
             if (newRewardPool < amount) {
                 emit RewardFailedDueLowPool(validatorId, amount);
-            } else {
-                Validator storage v = _validators[validatorId];
-                // make sure validator has tokens staked (nothing was unstaked right before the reward emission)
-                uint256 totalShares = uint256(v.totalShares);
-                if (totalShares == 0) {
-                    emit RewardFailedDueZeroStake(validatorId, amount);
-                } else {
-                    commissionPaid = uint128((uint256(amount) * uint256(v.commissionRate)) / DIVIDER);
-                    v.exchangeRate += uint128(((amount - commissionPaid) * DIVIDER) / totalShares); // distribute the tokens by increasing the exchange rate
-                    // commission is not compounded
-                    // commisison is distributed under the validator instance
-                    v.commissionAvailableToRedeem += commissionPaid;
-
-                    newRewardPool -= amount;
-                }
+                continue;
             }
+
+            Validator storage v = _validators[validatorId];
+
+            if (v.frozen) {
+                emit RewardFailedDueValidatorFrozen(validatorId, amount);
+                continue;
+            }
+
+            if (v.disabledAtBlock != 0) {
+                // validator became disabled (due to e.g. unstaking past base stake)
+                // between proof submission and finalization
+                emit RewardFailedDueValidatorDisabled(validatorId, amount);
+                continue;
+            }
+
+            if (v.totalShares == 0) {
+                // mathematically undefined -- no exchangeRate can turn zero into nonzero
+                // (this condition is only possible in testing with minValidatorEnableStake == 0;
+                //  in prod, validators with zero stake will always be disabled and so will trigger
+                //  the above check, not this one)
+                emit RewardFailedDueZeroStake(validatorId, amount);
+                continue;
+            }
+
+            commissionPaid = uint128((uint256(amount) * uint256(v.commissionRate)) / DIVIDER);
+
+            // distribute the tokens by increasing the exchange rate
+            // div by zero impossible due to check above
+            // (and in fact, presuming minValidatorEnableStake >= DIVIDER, v.totalShares will
+            //  always be >= DIVIDER while validator is enabled)
+            v.exchangeRate += uint128((uint256(amount - commissionPaid) * uint256(DIVIDER)) / v.totalShares);
+
+            // commission is not compounded
+            // commisison is distributed under the validator instance
+            v.commissionAvailableToRedeem += commissionPaid;
+
+            newRewardPool -= amount;
         }
+
         rewardPool = newRewardPool; // can never access these tokens anymore, reserved for validator rewards
     }
 
     /*
      * Disables validator instance starting from the given block
      */
-    function disableValidator(uint128 validatorId, uint256 blockNumber) external onlyStakingManager validValidatorId(validatorId) {
+    function disableValidator(uint128 validatorId, uint256 blockNumber) external onlyStakingManagerOrOwner {
+        require(validatorId < validatorsN, "Invalid validator");
         require(blockNumber > 0, "Disable block cannot be 0");
         _validators[validatorId].disabledAtBlock = blockNumber;
         emit ValidatorDisabled(validatorId, blockNumber);
@@ -219,16 +333,37 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Enables validator instance by setting the disabledAtBlock to 0
      */
-    function enableValidator(uint128 validatorId) external onlyStakingManager validValidatorId(validatorId) {
-        _validators[validatorId].disabledAtBlock = 0;
+    function enableValidator(uint128 validatorId) external onlyStakingManagerOrOwner {
+        require(validatorId < validatorsN, "Invalid validator");
+        Validator storage v = _validators[validatorId];
+
+        if (v.disabledAtBlock == 0) {
+            // if validator is already enabled, succeed quietly
+            return;
+        }
+
+        uint128 staked = _sharesToTokens(v.stakings[v._address].shares, v.exchangeRate);
+
+        require(staked >= validatorEnableMinStake, "Validator is insufficiently staked");
+
+        v.disabledAtBlock = 0;
         emit ValidatorEnabled(validatorId);
+    }
+
+    /*
+     * Determines whether a validator is currently able to be used by operators
+     */
+    function isValidatorEnabled(uint128 validatorId) external view returns (bool) {
+        require(validatorId < validatorsN, "Invalid validator");
+        return _validators[validatorId].disabledAtBlock == 0;
     }
 
     /*
      * Updates validator comission rate
      * Commission rate is a number between 0 and 10^18 (0%-100%)
      */
-    function setValidatorCommissionRate(uint128 validatorId, uint128 amount) external onlyOwner validValidatorId(validatorId) {
+    function setValidatorCommissionRate(uint128 validatorId, uint128 amount) external onlyOwner {
+        require(validatorId < validatorsN, "Invalid validator");
         require(amount < DIVIDER, "Rate must be less than 100%");
         _validators[validatorId].commissionRate = amount;
         emit ValidatorCommissionRateChanged(validatorId, amount);
@@ -265,7 +400,7 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Delegates tokens under the provided validator
      */
-    function stake(uint128 validatorId, uint128 amount) external {
+    function stake(uint128 validatorId, uint128 amount) external whenNotPaused {
         _stake(validatorId, amount, true);
     }
 
@@ -273,22 +408,28 @@ contract OperationalStaking is OwnableUpgradeable {
      * withTransfer is set to false when delegators recover unstaked or redelegated tokens.
      * These tokens are already in the contract.
      */
-    function _stake(uint128 validatorId, uint128 amount, bool withTransfer) internal validValidatorId(validatorId) {
+    function _stake(uint128 validatorId, uint128 amount, bool withTransfer) internal {
+        require(validatorId < validatorsN, "Invalid validator");
         require(amount >= REWARD_REDEEM_THRESHOLD, "Stake amount is too small");
         Validator storage v = _validators[validatorId];
         bool isValidator = msg.sender == v._address;
 
+        require(!v.frozen, "Validator is frozen");
+
         // validators should be able to stake if they are disabled.
         if (!isValidator) require(v.disabledAtBlock == 0, "Validator is disabled");
 
-        uint128 sharesAdd = _tokensToShares(amount, v.exchangeRate);
         Staking storage s = v.stakings[msg.sender];
 
+        uint128 newStaked = s.staked + amount;
+
+        require(newStaked >= delegatorMinStake, "Cannot stake to a position less than delegatorMinStake");
+
+        uint128 sharesAdd = _tokensToShares(amount, v.exchangeRate);
+
         if (isValidator) {
-            // the compounded rewards are not included in max stake check
-            // hence we use s.staked instead of s.shares for valueStaked calculation
-            uint128 valueStaked = s.staked + amount;
-            require(valueStaked <= validatorMaxStake, "Validator max stake exceeded");
+            // compares with newStaked to ignore compounded rewards
+            require(newStaked <= validatorMaxStake, "Validator max stake exceeded");
         } else {
             // cannot stake more than validator delegation max cap
             uint128 delegationMaxCap = v.stakings[v._address].staked * maxCapMultiplier;
@@ -302,59 +443,107 @@ contract OperationalStaking is OwnableUpgradeable {
         s.shares += sharesAdd;
 
         // keep track of staked tokens
-        s.staked += amount;
+        s.staked = newStaked;
         if (withTransfer) _transferToContract(msg.sender, amount);
         emit Staked(validatorId, msg.sender, amount);
     }
 
     /*
+     * Undelegates all staked tokens from the provided validator
+     */
+    function unstakeAll(uint128 validatorId) external whenNotPaused {
+        _unstake(validatorId, 0); // pass 0 to request full amount
+    }
+
+    /*
+     * Undelegates some number of tokens from the provided validator
+     */
+    function unstake(uint128 validatorId, uint128 amount) external whenNotPaused {
+        require(amount > 0, "Amount is 0");
+        _unstake(validatorId, amount);
+    }
+
+    /*
      * Undelegates tokens from the provided validator
      */
-    function unstake(uint128 validatorId, uint128 amount) external validValidatorId(validatorId) {
-        require(amount >= REWARD_REDEEM_THRESHOLD, "Unstake amount is too small");
+    function _unstake(uint128 validatorId, uint128 amount) internal {
+        require(validatorId < validatorsN, "Invalid validator");
+
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[msg.sender];
-        require(s.staked >= amount, "Staked < amount provided");
+
+        require(!v.frozen, "Validator is frozen");
+
+        require(amount <= s.staked, "Cannot unstake amount greater than current stake");
+
+        bool isUnstakingAll = amount == 0 || amount == s.staked;
+        uint128 effectiveAmount = isUnstakingAll ? s.staked : amount;
+        uint128 newStaked = s.staked - effectiveAmount;
+
+        if (isUnstakingAll) {
+            // enforce precondition for later math that effectiveAmount is always nonzero
+            require(effectiveAmount > 0, "Already fully unstaked");
+        } else {
+            // to prevent buildup of Unstaking[] elements, do not allow user to repeatedly unstake trivial amounts
+            // (but do allow removal of a trivial amount if it is the entire remaining stake)
+            require(effectiveAmount >= REWARD_REDEEM_THRESHOLD, "Unstake amount is too small");
+
+            // to prevent "spam" delegations, and runaway exchangeRate inflation from all-but-dust self-stake unstaking,
+            // disallow unstaking that would result in a new stake below delegatorMinStake
+            // (with the exception of an unstaking that takes the stake exactly to zero)
+            require(newStaked >= delegatorMinStake, "Cannot unstake to a position below delegatorMinStake (except to zero)");
+        }
 
         bool isValidator = msg.sender == v._address;
         if (isValidator && v.disabledAtBlock == 0) {
             // validators will have to disable themselves if they want to unstake tokens below delegation max cap
-            uint128 newValidatorMaxCap = (s.staked - amount) * maxCapMultiplier;
-            require(v.delegated <= newValidatorMaxCap, "Cannot unstake beyond max cap");
+            uint128 newValidatorMaxCap = newStaked * maxCapMultiplier;
+            require(v.delegated <= newValidatorMaxCap, "Cannot decrease delegation max-cap below current delegation while validator is enabled");
         }
         if (!isValidator) {
-            v.delegated -= amount;
+            v.delegated -= effectiveAmount;
         }
 
-        uint128 sharesRemove = _tokensToShares(amount, v.exchangeRate);
-        // "sell/burn" shares
-        // sometimes due to conversion inconsistencies shares to remove might end up being bigger than shares stored
-        // so we have to reassign it to allow the full unstake
-        if (sharesRemove > s.shares) sharesRemove = s.shares;
+        uint128 sharesToRemove = _tokensToShares(effectiveAmount, v.exchangeRate);
+
+        // sometimes, due to conversion inconsistencies, sharesToRemove might end up larger than s.shares;
+        // so we clamp sharesToRemove to s.shares (the redeemer unstakes trivially more tokens in this case)
+        if (sharesToRemove > s.shares) sharesToRemove = s.shares;
+
+        // sanity check: sharesToRemove should never be zero while amount is nonzero, as this would enable
+        // infinite draining of funds
+        require(sharesToRemove > 0, "Underflow error");
 
         unchecked {
-            s.shares -= sharesRemove;
+            s.shares -= sharesToRemove;
         }
-        v.totalShares -= sharesRemove;
+        v.totalShares -= sharesToRemove;
 
         // remove staked tokens
-        unchecked {
-            s.staked -= amount;
+        s.staked = newStaked;
+
+        // disable validator if they unstaked to below their required self-stake
+        if (isValidator && validatorEnableMinStake > 0 && v.disabledAtBlock == 0 && s.staked < validatorEnableMinStake) {
+            uint256 disabledAtBlock = block.number;
+            v.disabledAtBlock = disabledAtBlock;
+            emit ValidatorDisabled(validatorId, disabledAtBlock);
         }
+
         // create unstaking instance
         uint128 coolDownEnd = uint128(v.disabledAtBlock != 0 ? v.disabledAtBlock : block.number);
         unchecked {
             coolDownEnd += (isValidator ? validatorCoolDown : delegatorCoolDown);
         }
         uint128 unstakeId = uint128(v.unstakings[msg.sender].length);
-        v.unstakings[msg.sender].push(Unstaking(coolDownEnd, amount));
-        emit Unstaked(validatorId, msg.sender, amount, unstakeId);
+        v.unstakings[msg.sender].push(Unstaking(coolDownEnd, effectiveAmount));
+        emit Unstaked(validatorId, msg.sender, effectiveAmount, unstakeId);
     }
 
     /*
      * Restakes unstaked tokens
      */
-    function recoverUnstaking(uint128 amount, uint128 validatorId, uint128 unstakingId) external validValidatorId(validatorId) {
+    function recoverUnstaking(uint128 amount, uint128 validatorId, uint128 unstakingId) external whenNotPaused {
+        require(validatorId < validatorsN, "Invalid validator");
         require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(us.amount >= amount, "Unstaking has less tokens");
@@ -370,7 +559,8 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Transfers out unlocked unstaked tokens back to the delegator
      */
-    function transferUnstakedOut(uint128 amount, uint128 validatorId, uint128 unstakingId) external validValidatorId(validatorId) {
+    function transferUnstakedOut(uint128 amount, uint128 validatorId, uint128 unstakingId) external whenNotPaused {
+        require(validatorId < validatorsN, "Invalid validator");
         require(_validators[validatorId].unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
         Unstaking storage us = _validators[validatorId].unstakings[msg.sender][unstakingId];
         require(uint128(block.number) > us.coolDownEnd, "Cooldown period has not ended");
@@ -387,58 +577,73 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Redeems all available rewards
      */
-    function redeemAllRewards(uint128 validatorId, address beneficiary) external {
+    function redeemAllRewards(uint128 validatorId, address beneficiary) external whenNotPaused {
         _redeemRewards(validatorId, beneficiary, 0); // pass 0 to request full amount
     }
 
     /*
      * Redeems partial rewards
      */
-    function redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) external {
+    function redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) external whenNotPaused {
         require(amount > 0, "Amount is 0");
         _redeemRewards(validatorId, beneficiary, amount);
     }
 
-    function _redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) internal validValidatorId(validatorId) {
+    function _redeemRewards(uint128 validatorId, address beneficiary, uint128 amount) internal {
+        require(validatorId < validatorsN, "Invalid validator");
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[msg.sender];
+
+        require(!v.frozen, "Validator is frozen");
 
         // how many tokens a delegator/validator has in total on the contract
         // include earned commission if the delegator is the validator
         uint128 totalValue = _sharesToTokens(s.shares, v.exchangeRate);
 
-        bool redeemAll = amount == 0; // amount is 0 when it's requested to redeem all rewards
-        if (redeemAll) {
-            // can only redeem > redeem threshold
-            require(totalValue - s.staked >= REWARD_REDEEM_THRESHOLD, "Nothing to redeem");
-        }
-        // making sure that amount of rewards exist
-        else {
-            require(totalValue - s.staked >= amount, "Requested amount is too high");
-            require(amount >= REWARD_REDEEM_THRESHOLD, "Requested amount must be higher than redeem threshold");
-        }
+        // how many tokens a delegator/validator has "unlocked", free to be redeemed
+        // (i.e. not staked or in unstaking cooldown)
+        uint128 totalUnlockedValue = (totalValue < s.staked) ? 0 : (totalValue - s.staked);
 
-        uint128 amountToRedeem = redeemAll ? totalValue - s.staked : amount;
+        bool isRedeemingAll = (amount == 0 || amount == totalUnlockedValue); // amount is 0 when it's requested to redeem all rewards
 
-        // "sell/burn" the reward shares
-        uint128 validatorSharesRemove = _tokensToShares(amountToRedeem, v.exchangeRate);
-        if (validatorSharesRemove > s.shares) validatorSharesRemove = s.shares;
+        // make sure rewards exist
+        // (note that this still works in the case where we're redeeming all! always doing this check saves a branch op)
+        require(amount <= totalUnlockedValue, "Cannot redeem amount greater than held, unstaked rewards");
+
+        uint128 effectiveAmount = isRedeemingAll ? totalUnlockedValue : amount;
+
+        // can only redeem above redeem threshold
+        require(effectiveAmount >= REWARD_REDEEM_THRESHOLD, "Requested amount must be higher than redeem threshold");
+
+        uint128 sharesToBurn = _tokensToShares(effectiveAmount, v.exchangeRate);
+
+        // sometimes, due to conversion inconsistencies, sharesToBurn might end up larger than s.shares;
+        // so we clamp sharesToBurn to s.shares (the redeemer gets trivially more value out in this case)
+        if (sharesToBurn > s.shares) sharesToBurn = s.shares;
+
+        // sanity check: sharesToBurn should never be zero while effectiveAmount is nonzero, as this
+        // would enable infinite draining of funds
+        require(sharesToBurn > 0, "Underflow error");
+
         unchecked {
-            v.totalShares -= validatorSharesRemove;
+            v.totalShares -= sharesToBurn;
         }
         unchecked {
-            s.shares -= validatorSharesRemove;
+            s.shares -= sharesToBurn;
         }
 
-        emit RewardRedeemed(validatorId, beneficiary, amountToRedeem);
-        _transferFromContract(beneficiary, amountToRedeem);
+        emit RewardRedeemed(validatorId, beneficiary, effectiveAmount);
+        _transferFromContract(beneficiary, effectiveAmount);
     }
 
-    function redeemCommission(uint128 validatorId, address beneficiary, uint128 amount) public validValidatorId(validatorId) {
+    function redeemCommission(uint128 validatorId, address beneficiary, uint128 amount) public whenNotPaused {
+        require(validatorId < validatorsN, "Invalid validator");
         require(beneficiary != address(0x0), "Invalid beneficiary");
         Validator storage v = _validators[validatorId];
         require(v._address == msg.sender, "The sender is not the validator");
+
+        require(!v.frozen, "Validator is frozen");
 
         require(v.commissionAvailableToRedeem > 0, "No commission available to redeem");
         require(amount > 0, "The requested amount is 0");
@@ -451,7 +656,7 @@ contract OperationalStaking is OwnableUpgradeable {
         emit CommissionRewardRedeemed(validatorId, beneficiary, amount);
     }
 
-    function redeemAllCommission(uint128 validatorId, address beneficiary) external {
+    function redeemAllCommission(uint128 validatorId, address beneficiary) external whenNotPaused {
         redeemCommission(validatorId, beneficiary, _validators[validatorId].commissionAvailableToRedeem);
     }
 
@@ -459,13 +664,13 @@ contract OperationalStaking is OwnableUpgradeable {
      * Redelegates tokens to another validator if a validator got disabled.
      * First the tokens need to be unstaked
      */
-    function redelegateUnstaked(
-        uint128 amount,
-        uint128 oldValidatorId,
-        uint128 newValidatorId,
-        uint128 unstakingId
-    ) external validValidatorId(oldValidatorId) validValidatorId(newValidatorId) {
+    function redelegateUnstaked(uint128 amount, uint128 oldValidatorId, uint128 newValidatorId, uint128 unstakingId) external whenNotPaused {
+        require(oldValidatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[oldValidatorId];
+
+        // assets of delegators cannot be moved while validator is frozen
+        require(!v.frozen, "Validator is frozen");
+
         require(v.disabledAtBlock != 0, "Validator is not disabled");
         require(v._address != msg.sender, "Validator cannot redelegate");
         require(v.unstakings[msg.sender].length > unstakingId, "Unstaking does not exist");
@@ -484,11 +689,12 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Changes the validator staking address, this will transfer validator staking data and optionally unstakings
      */
-    function setValidatorAddress(uint128 validatorId, address newAddress) external {
+    function setValidatorAddress(uint128 validatorId, address newAddress) external whenNotPaused {
         Validator storage v = _validators[validatorId];
         require(msg.sender == v._address, "Sender is not the validator");
         require(v._address != newAddress, "The new address cannot be equal to the current validator address");
         require(newAddress != address(0), "Invalid validator address");
+        require(!v.frozen, "Validator is frozen");
 
         v.stakings[newAddress].shares += v.stakings[msg.sender].shares;
         v.stakings[newAddress].staked += v.stakings[msg.sender].staked;
@@ -530,9 +736,8 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Returns validator metadata with how many tokens were staked and delegated excluding compounded rewards
      */
-    function getValidatorMetadata(
-        uint128 validatorId
-    ) public view validValidatorId(validatorId) returns (address _address, uint128 staked, uint128 delegated, uint128 commissionRate, uint256 disabledAtBlock) {
+    function getValidatorMetadata(uint128 validatorId) public view returns (address _address, uint128 staked, uint128 delegated, uint128 commissionRate, uint256 disabledAtBlock) {
+        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         return (v._address, v.stakings[v._address].staked, v.delegated, v.commissionRate, v.disabledAtBlock);
     }
@@ -576,7 +781,8 @@ contract OperationalStaking is OwnableUpgradeable {
     /*
      * Returns validator staked and delegated token amounts, excluding compounded rewards
      */
-    function getValidatorStakingData(uint128 validatorId) external view validValidatorId(validatorId) returns (uint128 staked, uint128 delegated) {
+    function getValidatorStakingData(uint128 validatorId) external view returns (uint128 staked, uint128 delegated) {
+        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         return (v.stakings[v._address].staked, v.delegated);
     }
@@ -600,12 +806,8 @@ contract OperationalStaking is OwnableUpgradeable {
     function getDelegatorMetadata(
         address delegator,
         uint128 validatorId
-    )
-        external
-        view
-        validValidatorId(validatorId)
-        returns (uint128 staked, uint128 rewards, uint128 commissionEarned, uint128[] memory unstakingAmounts, uint128[] memory unstakingsEndEpochs)
-    {
+    ) external view returns (uint128 staked, uint128 rewards, uint128 commissionEarned, uint128[] memory unstakingAmounts, uint128[] memory unstakingsEndEpochs) {
+        require(validatorId < validatorsN, "Invalid validator");
         Validator storage v = _validators[validatorId];
         Staking storage s = v.stakings[delegator];
         staked = s.staked;
@@ -626,4 +828,59 @@ contract OperationalStaking is OwnableUpgradeable {
     }
 
     function renounceOwnership() public virtual override onlyOwner {}
+
+    function pause() external onlyOwner whenNotPaused {
+        _unpaused = false;
+        emit Paused(_msgSender());
+    }
+
+    function unpause() external onlyOwner {
+        require(!_unpaused, "must be paused");
+        _unpaused = true;
+        emit Unpaused(_msgSender());
+    }
+
+    function paused() external view returns (bool) {
+        return !_unpaused;
+    }
+
+    function freezeValidator(uint128 validatorId, string memory reason) public onlyOwner {
+        require(validatorId < validatorsN, "Invalid validator");
+        Validator storage v = _validators[validatorId];
+
+        require(!v.frozen, "Validator is already frozen");
+
+        v.frozen = true;
+        emit ValidatorFrozen(validatorId, reason);
+    }
+
+    function unfreezeValidator(uint128 validatorId) external onlyOwner {
+        require(validatorId < validatorsN, "Invalid validator");
+        Validator storage v = _validators[validatorId];
+
+        require(v.frozen, "Validator not frozen");
+
+        v.frozen = false;
+        emit ValidatorUnfrozen(validatorId);
+    }
+
+    // version migrations and migration helpers
+
+    function migrateTo(uint256 goalStepping) external onlyOwner {
+        require(goalStepping <= CURRENT_MIGRATION_STEPPING, "invalid target migration stepping");
+        require(_migrationStepping < goalStepping, "already migrated");
+
+        _migrating = true;
+
+        // if (_migrationStepping == 0 && goalStepping >= 1) _migrateToV1();
+        // if (_migrationStepping == 1 && goalStepping >= 2) _migrateToV2();
+        // if (_migrationStepping == 2 && goalStepping >= 3) _migrateToV3();
+
+        _migrating = false;
+    }
+
+    modifier whenMigrating() {
+        require(_migrating, "can only be called from migration");
+        _;
+    }
 }
