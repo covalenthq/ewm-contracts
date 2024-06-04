@@ -17,7 +17,7 @@
         "solhint-ci": "^4.0.2"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "^4.8.2",
+        "@openzeppelin/contracts": "^5.0.2",
         "@openzeppelin/contracts-upgradeable": "^4.8.2",
         "axios": "^0.21.4",
         "crypto": "^1.0.1",
