@@ -42,6 +42,45 @@
     "inputs": [
       {
         "indexed": false,
+        "internalType": "uint128",
+        "name": "amount",
+        "type": "uint128"
+      }
+    ],
+    "name": "DelegatorMinStakeChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "amount",
+        "type": "uint128"
+      }
+    ],
+    "name": "DelegatorUnstakeCooldownChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "version",
+        "type": "uint8"
+      }
+    ],
+    "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
         "internalType": "address",
         "name": "cqt",
         "type": "address"
@@ -61,6 +100,12 @@
       {
         "indexed": false,
         "internalType": "uint128",
+        "name": "recoverUnstakingCoolDown",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint128",
         "name": "maxCapMultiplier",
         "type": "uint128"
       },
@@ -69,9 +114,21 @@
         "internalType": "uint128",
         "name": "validatorMaxStake",
         "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "validatorEnableMinStake",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "delegatorMinStake",
+        "type": "uint128"
       }
     ],
-    "name": "Initialized",
+    "name": "InitializedSemantics",
     "type": "event"
   },
   {
@@ -104,6 +161,32 @@
       }
     ],
     "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Paused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "amount",
+        "type": "uint128"
+      }
+    ],
+    "name": "RecoverUnstakeCooldownChanged",
     "type": "event"
   },
   {
@@ -190,7 +273,26 @@
         "type": "uint128"
       }
     ],
-    "name": "RewardFailedDueLowPool",
+    "name": "RewardFailedDueValidatorDisabled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "amount",
+        "type": "uint128"
+      }
+    ],
+    "name": "RewardFailedDueValidatorFrozen",
     "type": "event"
   },
   {
@@ -256,6 +358,19 @@
       {
         "indexed": true,
         "internalType": "uint128",
+        "name": "rewardId",
+        "type": "uint128"
+      }
+    ],
+    "name": "RewardsDisbursed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint128",
         "name": "validatorId",
         "type": "uint128"
       },
@@ -285,7 +400,20 @@
         "type": "address"
       }
     ],
-    "name": "StakingManagerAddressChanged",
+    "name": "StakingManagerChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Unpaused",
     "type": "event"
   },
   {
@@ -436,6 +564,19 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "amount",
+        "type": "uint128"
+      }
+    ],
+    "name": "ValidatorEnableMinStakeChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "uint128",
         "name": "validatorId",
@@ -443,6 +584,25 @@
       }
     ],
     "name": "ValidatorEnabled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "ValidatorFrozen",
     "type": "event"
   },
   {
@@ -459,6 +619,32 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      }
+    ],
+    "name": "ValidatorUnfrozen",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "amount",
+        "type": "uint128"
+      }
+    ],
+    "name": "ValidatorUnstakeCooldownChanged",
+    "type": "event"
+  },
+  {
     "inputs": [],
     "name": "CQT",
     "outputs": [
@@ -466,6 +652,32 @@
         "internalType": "contract IERC20Upgradeable",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "DEFAULT_DELEGATOR_MIN_STAKE",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "DEFAULT_VALIDATOR_ENABLE_MIN_STAKE",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
       }
     ],
     "stateMutability": "view",
@@ -522,8 +734,40 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "checkDelegatorExists",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "delegatorCoolDown",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "delegatorMinStake",
     "outputs": [
       {
         "internalType": "uint128",
@@ -553,11 +797,6 @@
         "internalType": "uint128",
         "name": "validatorId",
         "type": "uint128"
-      },
-      {
-        "internalType": "uint256",
-        "name": "blockNumber",
-        "type": "uint256"
       }
     ],
     "name": "disableValidator",
@@ -574,6 +813,24 @@
       }
     ],
     "name": "enableValidator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      },
+      {
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "freezeValidator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -656,6 +913,25 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "delegator",
+        "type": "address"
+      }
+    ],
+    "name": "getDelegatorTotalLocked",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "totalValueLocked",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getMetadata",
     "outputs": [
@@ -691,12 +967,27 @@
       },
       {
         "internalType": "uint128",
+        "name": "_recoverUnstakingCoolDown",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
         "name": "_maxCapMultiplier",
         "type": "uint128"
       },
       {
         "internalType": "uint128",
         "name": "_validatorMaxStake",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
+        "name": "_validatorEnableMinStake",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
+        "name": "_delegatorMinStake",
         "type": "uint128"
       }
     ],
@@ -791,6 +1082,29 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getValidatorsCompoundedStakes",
+    "outputs": [
+      {
+        "internalType": "uint128[]",
+        "name": "validatorIds",
+        "type": "uint128[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "isEnableds",
+        "type": "bool[]"
+      },
+      {
+        "internalType": "uint128[]",
+        "name": "cstaked",
+        "type": "uint128[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint128",
@@ -853,6 +1167,11 @@
       },
       {
         "internalType": "uint128",
+        "name": "rCoolDown",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint128",
         "name": "maxCapM",
         "type": "uint128"
       },
@@ -865,6 +1184,25 @@
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      }
+    ],
+    "name": "isValidatorEnabled",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -894,6 +1232,26 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint128",
@@ -914,6 +1272,19 @@
     "name": "recoverUnstaking",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "recoverUnstakingCoolDown",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1049,6 +1420,11 @@
   {
     "inputs": [
       {
+        "internalType": "uint128",
+        "name": "rewardId",
+        "type": "uint128"
+      },
+      {
         "internalType": "uint128[]",
         "name": "ids",
         "type": "uint128[]"
@@ -1068,11 +1444,50 @@
     "inputs": [
       {
         "internalType": "uint128",
+        "name": "coolDown",
+        "type": "uint128"
+      }
+    ],
+    "name": "setDelegatorCoolDown",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "minStake",
+        "type": "uint128"
+      }
+    ],
+    "name": "setDelegatorMinStake",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
         "name": "newMaxCapMultiplier",
         "type": "uint128"
       }
     ],
     "name": "setMaxCapMultiplier",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "coolDown",
+        "type": "uint128"
+      }
+    ],
+    "name": "setRecoverUnstakingCoolDown",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1122,6 +1537,32 @@
       }
     ],
     "name": "setValidatorCommissionRate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "coolDown",
+        "type": "uint128"
+      }
+    ],
+    "name": "setValidatorCoolDown",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "minStake",
+        "type": "uint128"
+      }
+    ],
+    "name": "setValidatorEnableMinStake",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1225,6 +1666,26 @@
         "internalType": "uint128",
         "name": "validatorId",
         "type": "uint128"
+      }
+    ],
+    "name": "unfreezeValidator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
       },
       {
         "internalType": "uint128",
@@ -1238,8 +1699,34 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint128",
+        "name": "validatorId",
+        "type": "uint128"
+      }
+    ],
+    "name": "unstakeAll",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "validatorCoolDown",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "validatorEnableMinStake",
     "outputs": [
       {
         "internalType": "uint128",
