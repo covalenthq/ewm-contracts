@@ -4,7 +4,7 @@
         "@nomicfoundation/hardhat-toolbox": "^3.0.0",
         "@openzeppelin/hardhat-upgrades": "^2.2.0",
         "chai": "^4.3.7",
-        "delay": "^5.0.0",
+        "delay": "^6.0.0",
         "dotenv": "^16.0.3",
         "eslint": "^8.39.0",
         "eslint-config-google": "^0.14.0",
