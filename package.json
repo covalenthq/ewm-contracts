@@ -19,7 +19,7 @@
     "dependencies": {
         "@openzeppelin/contracts": "^4.8.2",
         "@openzeppelin/contracts-upgradeable": "^4.8.2",
-        "axios": "^0.21.4",
+        "axios": "^1.7.2",
         "crypto": "^1.0.1",
         "csv-parser": "^3.0.0",
         "csv-writer": "^1.6.0",
