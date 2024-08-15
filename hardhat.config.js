@@ -63,7 +63,7 @@ module.exports = {
     networks: {
         hardhat: {
             forking: {
-                url: "https://eth-mainnet.public.blastapi.io",
+                url: "https://eth.llamarpc.com",
                 blockNumber: 13182263
         },
         },
@@ -71,7 +71,7 @@ module.exports = {
             url: 'http://0.0.0.0:8545/',
         },
         // mainnet: {
-        //     url: "https://eth-mainnet.public.blastapi.io",
+        //     url: "https://eth.llamarpc.com",
         //     accounts: [
         //         process.env.CONTRACTS_DEPLOYER,
         //         process.env.SC_MANAGER
