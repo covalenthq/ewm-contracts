@@ -46,9 +46,9 @@ This repo contains two contracts: ProofChain and Staking which are part of the C
 
 Operators stake their tokens, do work by running nodes, submit a proof of work to the ProofChain and receive rewards in CQT tokens. If enough operators get the same result of work, then quorum is achieved, the rewards are emitted and pushed from the ProofChain to the Staking. Additionally, delegators (these who do not run nodes) can delegate their tokens under the operators and receive rewards. The delegators will have to pay commission fees to the operators.
 
-For the detailed explanation of what is Covalent Network and what kind of work the operators do please refer to the [white paper](https://www.covalenthq.com/static/documents/Block%20Specimen%20Whitepaper%20V1.2.pdf).
+For the detailed explanation of what is Covalent Network and what kind of work the operators do please refer to the [white paper](https://www.covalenthq.com/docs/resources/block-specimen-whitepaper).
 
-![image](https://user-images.githubusercontent.com/14303197/165625028-e6676cfb-1b52-47d4-bdc8-97ff95db18dd.png)
+![image](https://www.datocms-assets.com/86369/1721760562-covalent-staking-overview-2x.svg)
 
 
 
