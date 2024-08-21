@@ -3,7 +3,7 @@ const { ethers, defender } = require('hardhat');
 const stakingAddress = process.env.STAKING_ADDRESS
 
 async function main() {
-    const OperationalStakingV2 = await ethers.getContractFactory("OperationalStaking");
+    const OperationalStakingV2 = await ethers.getContractFactory("TokenSetterStaking");
 
     console.log("Preparing proposal...");
 

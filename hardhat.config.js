@@ -63,21 +63,21 @@ module.exports = {
     networks: {
         hardhat: {
             forking: {
-                url: "https://eth-mainnet.public.blastapi.io",
+                url: "https://ethereum.web3.covalenthq.com/mainnet/ingest",
                 blockNumber: 13182263
         },
         },
         test: {
             url: 'http://0.0.0.0:8545/',
         },
-        // mainnet: {
-        //     url: "https://eth-mainnet.public.blastapi.io",
-        //     accounts: [
-        //         process.env.CONTRACTS_DEPLOYER,
-        //         process.env.SC_MANAGER
-        //     ],
-        // chainId: 1,
-        // },
+        mainnet: {
+            url: "https://ethereum.web3.covalenthq.com/mainnet/ingest",
+            accounts: [
+                process.env.CONTRACTS_DEPLOYER,
+                process.env.SC_MANAGER
+            ],
+        chainId: 1,
+        },
         // moonbeam: {
         //     url: "https://rpc.api.moonbeam.network",
         //     gas: 5000000,
