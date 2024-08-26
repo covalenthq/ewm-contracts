@@ -13,7 +13,7 @@
         "hardhat-contract-sizer": "^2.8.0",
         "mocha": "^10.2.0",
         "prettier": "^3.3.3",
-        "prettier-plugin-solidity": "^1.3.1",
+        "prettier-plugin-solidity": "^1.4.1",
         "solhint-ci": "^4.0.2"
     },
     "dependencies": {
@@ -27,7 +27,7 @@
         "hardhat-abi-exporter": "^2.10.1",
         "pg": "^8.12.0",
         "prettier": "^3.3.3",
-        "prettier-plugin-solidity": "^1.3.1",
+        "prettier-plugin-solidity": "^1.4.1",
         "prompt": "^1.3.0",
         "solhint": "^5.0.3",
         "solidity-ast": "^0.4.46"
